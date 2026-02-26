@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIGEN R0 — Alt2 v24: Rich Graph + UX</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:#5B93BA;--blue-bg:#B3D4E8;--blue-bg2:#D5E6F2;
+  --green:#5EA87D;--green-bg:#A8DBC0;--green-bg2:#CCE9D8;
+  --amber:#B8923E;--amber-bg:#E5CFA0;--amber-bg2:#F0DFBF;
+  --rose:#B87070;--rose-bg:#DDBABA;
+
+  --bold:#000;--base:#1D1D1F;--gray:#86868B;
+  --bg:#FFF;--sf:#F5F5F7;--bd:#D5D5DA;
+  --r:10px;--r-sm:8px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,'Noto Sans KR',BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--base);-webkit-font-smoothing:antialiased;overflow:hidden;height:100vh;}
+.app{display:flex;height:100vh;}
+
+.toolbar{width:48px;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px;}
+.logo{width:28px;height:28px;background:var(--blue);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;margin-bottom:10px;}
+.tb{width:32px;height:32px;border-radius:var(--r-sm);border:none;background:0;color:var(--gray);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:.15s;}
+.tb:hover{background:rgba(0,0,0,.05);color:var(--base);}
+.tb.on{background:var(--blue-bg);color:var(--base);}
+.toolbar .sp{flex:1;}
+
+/* [v6] 사이드 패널 (프로젝트/대화기록) */
+.side-panel{width:0;overflow:hidden;background:var(--bg);border-right:1px solid var(--bd);display:flex;flex-direction:column;transition:width .2s ease;}
+.side-panel.open{width:260px;}
+.panel-header{padding:12px 14px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.panel-title{font-size:13px;font-weight:600;color:var(--bold);}
+.close-btn{width:24px;height:24px;border:none;background:var(--sf);border-radius:5px;font-size:14px;cursor:pointer;color:var(--gray);display:flex;align-items:center;justify-content:center;}
+.close-btn:hover{background:var(--bd);}
+.panel-body{flex:1;overflow-y:auto;padding:10px;}
+.proj-item{padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;font-size:11px;color:var(--base);transition:.12s;margin-bottom:2px;display:flex;align-items:center;gap:6px;}
+.proj-item:hover{background:var(--sf);}
+.proj-item.active{background:var(--blue-bg2);font-weight:600;}
+.proj-item .proj-icon{font-size:14px;}
+.proj-item .proj-name{flex:1;}
+.proj-item .proj-date{font-size:9px;color:var(--gray);}
+.hist-item{padding:7px 10px;border-radius:var(--r-sm);cursor:pointer;font-size:10px;color:var(--gray);transition:.12s;margin-bottom:1px;border-left:2px solid transparent;}
+.hist-item:hover{background:var(--sf);color:var(--base);}
+.hist-item.current{border-left-color:var(--blue);background:var(--blue-bg2);color:var(--base);font-weight:500;}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0;}
+.hdr{height:46px;border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;}
+.hdr .tit{font-size:14px;font-weight:700;color:var(--bold);white-space:nowrap;}
+.sel{padding:4px 10px;border:1px solid var(--bd);border-radius:var(--r);font-size:11px;font-family:inherit;background:var(--bg);color:var(--base);cursor:pointer;outline:none;}
+
+/* Mode switch */
+.msw{display:flex;border:1.5px solid var(--bd);border-radius:var(--r);overflow:hidden;margin-left:auto;position:relative;height:30px;}
+.msw button{padding:0 16px;border:none;background:0;font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--gray);transition:.2s;position:relative;z-index:1;}
+.msw button.on{color:var(--bold);font-weight:600;}
+.msl{position:absolute;height:100%;border-radius:8px;transition:.25s ease;z-index:0;}
+.msl.free{left:1px;width:calc(50% - 1px);background:var(--blue-bg);}
+.msl.guided{left:50%;width:calc(50% - 1px);background:var(--blue-bg);}
+
+.cnt{flex:1;overflow:hidden;position:relative;}
+
+/* FREE */
+.freeM{display:flex;height:100%;position:absolute;inset:0;transition:opacity .2s,transform .2s;}
+.freeM.hide{opacity:0;pointer-events:none;transform:translateX(-6px);}
+
+.chat{width:42%;min-width:200px;border-right:1px solid var(--bd);display:flex;flex-direction:column;}
+.msgs{flex:1;overflow-y:auto;padding:14px 16px;}
+.m{margin-bottom:10px;}.m.u{display:flex;justify-content:flex-end;}
+.m.u .bb{background:var(--sf);border:1px solid var(--bd);color:var(--base);padding:8px 14px;border-radius:var(--r);max-width:82%;font-size:12px;line-height:1.5;}
+.m.ai .bb{background:var(--bg);border:1px solid var(--bd);padding:8px 14px;border-radius:var(--r);max-width:90%;font-size:12px;line-height:1.5;color:var(--base);}
+.m.ai .nm{font-size:10px;font-weight:700;color:var(--bold);margin-bottom:2px;}
+.cia{padding:10px 14px;border-top:1px solid var(--bd);}
+
+/* [NEW] 이미지 첨부 프리뷰 */
+.attach-preview{display:none;margin-bottom:6px;position:relative;width:fit-content;}
+.attach-preview.show{display:block;}
+.attach-preview img{height:48px;border-radius:var(--r-sm);border:1px solid var(--bd);}
+.attach-preview .rm{position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--rose);color:#fff;border:none;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+.ciw{display:flex;gap:6px;align-items:end;}
+/* [NEW] 첨부 버튼 */
+.att{width:40px;height:40px;border-radius:var(--r);border:1px solid var(--bd);background:var(--bg);color:var(--gray);cursor:pointer;font-size:16px;transition:.15s;flex-shrink:0;}
+.att:hover{background:var(--sf);color:var(--base);}
+.ci{flex:1;padding:9px 14px;border:1px solid var(--bd);border-radius:var(--r);font-size:12px;font-family:inherit;outline:none;background:var(--bg);color:var(--base);height:40px;transition:.2s;}
+.ci:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(91,147,186,.2);}
+.ci::placeholder{color:var(--gray);}
+.snd{width:40px;height:40px;border-radius:var(--r);border:1px solid var(--bd);background:var(--sf);color:var(--base);cursor:pointer;font-size:14px;transition:.15s;flex-shrink:0;}
+.snd:hover{background:var(--blue);color:#fff;}
+.hidden-input{display:none;}
+
+/* Free right */
+.fRight{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.frHdr{height:36px;border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 14px;font-size:11px;font-weight:600;color:var(--bold);}
+.frScr{flex:1;overflow-y:auto;padding:12px;}
+
+/* Step cards — [v6] 타임라인 레이아웃 (큰 원형 번호 + 긴 연결선) */
+.step-timeline{padding:16px 12px;}
+.step-item{display:flex;gap:14px;position:relative;}
+.step-line-col{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:28px;}
+.step-dot{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;z-index:1;transition:background .3s,transform .2s;}
+.step-dot.done{background:var(--green);transform:scale(1);}
+.step-dot.running{background:var(--blue);animation:pulse 1.5s infinite;transform:scale(1.08);}
+.step-dot.pending{background:var(--bd);color:var(--gray);}
+.step-dot.dirty{background:var(--amber-bg);color:var(--base);}
+.step-dot.error{background:var(--rose);}
+.step-line{flex:1;width:2px;background:var(--bd);min-height:24px;transition:background .4s;}
+.step-line.done{background:var(--green-bg);}
+.step-line.running{background:var(--blue-bg);}
+
+.step-body{flex:1;padding-bottom:16px;min-width:0;}
+.step-header{display:flex;align-items:center;gap:6px;margin-bottom:4px;cursor:pointer;}
+.step-header .stit{font-size:12px;font-weight:600;color:var(--bold);flex:1;}
+.step-header .stm{font-size:9px;color:var(--gray);font-family:'JetBrains Mono',monospace;}
+.step-toggle{width:22px;height:22px;border-radius:5px;background:var(--sf);border:1px solid var(--bd);display:none;align-items:center;justify-content:center;transition:all .2s;cursor:pointer;flex-shrink:0;margin-left:6px;}
+.step-toggle.show{display:inline-flex;}
+.step-toggle:hover{background:var(--blue-bg);border-color:var(--blue);}
+.step-toggle.open{transform:rotate(90deg);background:var(--blue-bg);border-color:var(--blue);}
+.step-header .tool-badge{display:inline-flex;padding:2px 6px;border-radius:4px;font-size:8px;font-weight:600;letter-spacing:.3px;}
+.tool-badge.clinvar{background:var(--blue-bg);color:var(--base);}
+.tool-badge.gwas{background:var(--green-bg);color:var(--base);}
+.tool-badge.pubmed{background:var(--amber-bg);color:var(--base);}
+.tool-badge.analyze{background:var(--sf);color:var(--base);border:1px solid var(--bd);}
+
+.step-detail{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:10px 12px;margin-top:6px;font-size:11px;color:var(--base);line-height:1.7;display:none;}
+.step-detail.op{display:block;}
+.step-detail .finding-title{font-weight:600;color:var(--bold);margin-bottom:4px;}
+.step-detail .finding-item{padding-left:8px;position:relative;margin-bottom:2px;}
+.step-detail .finding-item::before{content:'•';position:absolute;left:0;color:var(--gray);}
+
+/* [v6] Step 액션 버튼 — detail 내부에 포함 */
+.step-actions{display:flex;gap:4px;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd);flex-wrap:wrap;}
+.step-actions button{padding:3px 10px;border-radius:var(--r-sm);font-size:9px;font-weight:500;cursor:pointer;border:1px solid var(--bd);background:var(--bg);font-family:inherit;color:var(--gray);transition:.15s;display:flex;align-items:center;gap:3px;}
+.step-actions button:hover{background:var(--blue-bg2);color:var(--base);border-color:var(--blue);}
+
+/* [v13] Step 인터랙션 인라인 UI */
+.step-interact{margin-top:8px;padding:8px 10px;border:1px solid var(--blue-bg);border-radius:var(--r);background:var(--blue-bg2);font-size:10px;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.step-interact .si-title{font-weight:600;color:var(--bold);margin-bottom:6px;display:flex;align-items:center;gap:4px;}
+.step-interact textarea{width:100%;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;font-size:10px;font-family:inherit;resize:vertical;min-height:50px;outline:none;background:var(--bg);color:var(--base);}
+.step-interact textarea:focus{border-color:var(--blue);}
+.step-interact input{width:100%;padding:6px 8px;border:1px solid var(--bd);border-radius:6px;font-size:10px;font-family:inherit;outline:none;background:var(--bg);color:var(--base);}
+.step-interact input:focus{border-color:var(--blue);}
+.si-btns{display:flex;gap:4px;margin-top:6px;justify-content:flex-end;}
+.si-btns button{padding:3px 10px;border-radius:5px;font-size:9px;font-weight:500;cursor:pointer;border:1px solid var(--bd);background:var(--bg);font-family:inherit;color:var(--base);}
+.si-btns button.pri{background:var(--blue);border-color:var(--blue);color:#fff;}
+.si-btns button.pri:hover{opacity:.85;}
+.step-explain{margin-top:8px;padding:8px 10px;border:1px solid var(--green-bg);border-radius:var(--r);background:var(--green-bg2);font-size:10px;line-height:1.6;color:var(--base);animation:fadeIn .2s ease;}
+.step-retry-anim{margin-top:6px;padding:6px 10px;border:1px solid var(--amber-bg);border-radius:var(--r);background:var(--amber-bg2);font-size:10px;color:var(--base);animation:fadeIn .2s ease;display:flex;align-items:center;gap:6px;}
+.retry-spinner{width:12px;height:12px;border:2px solid var(--bd);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* [v6] Step 참조 레이블 */
+.step-refs{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;}
+.ref-label{font-size:8px;color:var(--gray);border:1px dashed var(--bd);padding:1px 6px;border-radius:4px;white-space:nowrap;}
+
+/* .scb 제거됨 — v6에서 .step-detail로 대체 */
+
+/* GUIDED */
+.guidM{display:flex;height:100%;position:absolute;inset:0;transition:opacity .2s,transform .2s;}
+.guidM.hide{opacity:0;pointer-events:none;transform:translateX(6px);}
+
+.gL{width:48%;border-right:1px solid var(--bd);display:flex;flex-direction:column;}
+.gProg{display:flex;padding:10px 14px;gap:3px;border-bottom:1px solid var(--bd);background:var(--bg);flex-shrink:0;justify-content:center;}
+.gpi{text-align:center;cursor:pointer;padding:0 5px;transition:.1s;}.gpi:hover{opacity:.7;}
+.gpd{width:26px;height:26px;border-radius:var(--r-sm);margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;border:1.5px solid var(--bd);background:var(--bg);color:var(--gray);transition:.2s;}
+.gpd.done{background:var(--green-bg);border-color:var(--green);color:var(--base);}
+.gpd.cur{background:var(--blue-bg);border-color:var(--blue);color:var(--base);}
+.gpd.dirty{background:var(--amber-bg);border-color:var(--amber);color:var(--base);}
+.gpl{font-size:7px;color:var(--gray);font-weight:400;line-height:1.1;}
+.gpi.done .gpl{color:var(--base);font-weight:500;}
+.gpi.cur .gpl{color:var(--base);font-weight:600;}
+.gline{width:16px;height:1.5px;background:var(--bd);align-self:center;margin-bottom:12px;}
+.gline.dirty{background:var(--amber);}
+
+.gCnt{flex:1;overflow-y:auto;padding:14px;}
+.gFt{padding:9px 12px;border-top:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;background:var(--bg);flex-shrink:0;}
+
+.gR{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.grTabs{display:flex;border-bottom:1px solid var(--bd);padding:6px 12px;gap:4px;}
+.grt{padding:4px 12px;border-radius:var(--r);font-size:10px;font-weight:500;cursor:pointer;border:1px solid transparent;background:0;color:var(--gray);font-family:inherit;transition:.12s;}
+.grt.on{background:var(--blue-bg);border-color:var(--blue);color:var(--base);font-weight:600;}
+.grP{flex:1;overflow-y:auto;padding:12px;display:none;}.grP.on{display:block;}
+
+/* Shared */
+.btn{padding:6px 14px;border-radius:var(--r);font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--bd);background:var(--bg);font-family:inherit;color:var(--base);transition:.15s;}
+.btn:hover{background:var(--sf);}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff;}
+.btn.pri:hover{background:#4E87AD;}
+.btn.suc{background:var(--green);border-color:var(--green);color:#fff;}
+.btn.wrn{background:var(--amber-bg);border-color:var(--amber);color:var(--base);}
+.btn:disabled{opacity:.3;cursor:not-allowed;}
+
+.dirty-banner{background:var(--amber-bg2);border:1.5px solid var(--amber);border-radius:var(--r);padding:7px 10px;margin-bottom:10px;font-size:10px;color:var(--base);display:flex;align-items:center;justify-content:space-between;gap:6px;}
+
+.fl{margin-bottom:10px;}
+.flb{font-size:10px;font-weight:600;color:var(--gray);margin-bottom:3px;display:block;}
+.fin{width:100%;padding:7px 10px;border:1px solid var(--bd);border-radius:var(--r);font-size:12px;font-family:inherit;outline:none;background:var(--bg);color:var(--base);transition:.15s;}
+.fin:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(91,147,186,.15);}
+.fta{width:100%;padding:7px 10px;border:1px solid var(--bd);border-radius:var(--r);font-size:11px;font-family:inherit;outline:none;resize:vertical;min-height:36px;line-height:1.4;background:var(--bg);color:var(--base);}
+.fta:focus{border-color:var(--blue);}
+
+.tags{display:flex;flex-wrap:wrap;gap:4px;}
+.tag{padding:4px 9px;border-radius:var(--r);font-size:10px;font-weight:400;border:1px solid var(--bd);background:var(--bg);cursor:pointer;transition:.12s;display:inline-flex;align-items:center;gap:3px;color:var(--base);}
+.tag.on{background:var(--blue-bg);border-color:var(--blue);font-weight:500;}
+.tag .x{font-size:11px;color:var(--gray);cursor:pointer;}.tag .x:hover{color:var(--base);}
+.tag.add{border-style:dashed;color:var(--gray);}
+
+.pico{border:1px solid var(--bd);border-radius:var(--r);padding:6px 9px;margin-bottom:4px;background:var(--bg);}
+.pltr{display:inline-flex;width:20px;height:20px;border-radius:5px;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:var(--base);margin-right:4px;}
+
+.cri{display:flex;align-items:center;gap:5px;padding:6px 8px;border:1px solid var(--bd);border-radius:var(--r);margin-bottom:4px;font-size:10px;color:var(--base);background:var(--bg);}
+.cri.off{color:var(--gray);background:var(--sf);}
+.cri input{accent-color:var(--blue);width:15px;height:15px;}
+
+.mx{width:100%;border-collapse:separate;border-spacing:0;font-size:10px;}
+.mx th{background:var(--sf);padding:4px 5px;text-align:center;font-weight:600;color:var(--bold);border-bottom:1.5px solid var(--bd);font-size:9px;}
+.mx th:first-child{text-align:left;}
+.mx td{padding:4px 5px;border-bottom:1px solid var(--bd);text-align:center;color:var(--base);}
+.mx td:first-child{text-align:left;}
+.mx tr:hover{background:var(--sf);}
+.mx tr.filt{opacity:.12;}
+.cp{background:var(--green-bg);font-weight:600;}
+.cf{background:var(--rose-bg);font-weight:600;}
+.cm{background:var(--amber-bg2);font-weight:500;}
+
+.ex{width:100%;border-collapse:separate;border-spacing:0;font-size:10px;}
+.ex th{background:var(--sf);padding:4px 5px;text-align:left;font-weight:600;color:var(--bold);border-bottom:1.5px solid var(--bd);}
+.ex td{padding:3px 5px;border-bottom:1px solid var(--bd);color:var(--base);vertical-align:top;}
+.ev{color:var(--base);cursor:pointer;font-size:9px;text-decoration:underline;}
+
+.miniC{display:flex;flex-direction:column;height:100;}
+.miniMsgs{flex:1;overflow-y:auto;padding:10px;}
+.miniIn{padding:8px 10px;border-top:1px solid var(--bd);}
+.miniInp{width:100%;padding:7px 10px;border:1px solid var(--bd);border-radius:var(--r);font-size:11px;font-family:inherit;outline:none;color:var(--base);}
+.miniInp::placeholder{color:var(--gray);}
+
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
+.stat-card{border:1px solid var(--bd);border-radius:var(--r);padding:10px;text-align:center;background:var(--bg);}
+.stat-card .num{font-size:20px;font-weight:700;color:var(--bold);}
+.stat-card .label{font-size:11px;color:var(--gray);}
+
+/* [v24] Clinical Dashboard */
+.rpt{padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+
+/* Hero card — Apple Health style */
+.rpt-hero{background:#fff;border-radius:14px;padding:22px 24px 18px;margin-bottom:14px;color:#1C1C1E;position:relative;border:1px solid #F0F0F0;}
+.rpt-hero-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.rpt-hero-left{display:flex;flex-direction:column;gap:2px;}
+.rpt-hero-title{font-size:17px;font-weight:700;color:#1C1C1E;letter-spacing:-.2px;}
+.rpt-hero-sub{font-size:11px;color:#8E8E93;margin-top:1px;font-weight:400;}
+.rpt-risk-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;background:#FFF0F0;border:1px solid #FFCDD2;color:#D32F2F;font-size:12px;font-weight:700;letter-spacing:.3px;}
+.rpt-risk-dot{width:7px;height:7px;border-radius:50%;background:#D32F2F;}
+.rpt-hero-body{display:flex;align-items:center;gap:24px;}
+.rpt-ring-area{flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center;}
+.rpt-ring-center{position:absolute;text-align:center;}
+.rpt-ring-pct{font-size:32px;font-weight:800;color:#D32F2F;letter-spacing:-1px;line-height:1;}
+.rpt-ring-label{font-size:10px;color:#8E8E93;font-weight:500;margin-top:2px;}
+.rpt-metrics{flex:1;display:flex;flex-direction:column;gap:10px;}
+.rpt-metric{display:flex;align-items:baseline;gap:8px;padding:8px 0;border-bottom:1px solid #F5F5F5;}
+.rpt-metric:last-child{border-bottom:none;padding-bottom:0;}
+.rpt-metric-val{font-size:22px;font-weight:800;color:#1C1C1E;min-width:58px;letter-spacing:-.5px;}
+.rpt-metric-info{flex:1;}
+.rpt-metric-name{font-size:12px;font-weight:600;color:#1C1C1E;}
+.rpt-metric-desc{font-size:10px;color:#8E8E93;margin-top:1px;}
+.rpt-conf-row{display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid #F0F0F0;}
+.rpt-conf-bar-bg{flex:1;height:4px;border-radius:2px;background:#F0F0F0;}
+.rpt-conf-bar-fill{height:4px;border-radius:2px;background:linear-gradient(90deg,#66BB6A,#43A047);transition:width .6s;}
+.rpt-conf-label{font-size:11px;color:#8E8E93;font-weight:500;}
+.rpt-conf-val{font-size:13px;font-weight:700;color:#2E7D32;}
+
+/* Metric strip */
+.met-strip{display:flex;gap:8px;margin-bottom:12px;}
+.met-card{flex:1;padding:14px 10px;border-radius:10px;text-align:center;border:1px solid #F0F0F0;background:#FAFAFA;transition:transform .15s;}
+.met-card:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.met-v{font-size:18px;font-weight:800;line-height:1.1;color:#1C1C1E;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;letter-spacing:-.3px;}
+.met-l{font-size:11px;color:#1C1C1E;margin-top:5px;font-weight:600;letter-spacing:.1px;}
+.met-sub{font-size:11px;color:#AEAEB2;margin-top:2px;font-weight:400;}
+
+/* Variant bar */
+.var-sec{margin-bottom:12px;}
+.sec-title{font-size:11px;font-weight:800;color:#48484A;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;display:flex;align-items:center;gap:5px;}
+.sec-title::after{content:'';flex:1;height:1px;background:#EFEFEF;}
+.var-bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:#F5F5F5;margin-bottom:6px;}
+.var-legend{display:flex;gap:10px;flex-wrap:wrap;}
+.var-legend span{font-size:10px;color:#636366;display:flex;align-items:center;gap:4px;font-weight:500;}
+.vdot{width:6px;height:6px;border-radius:2px;display:inline-block;}
+
+/* Evidence table */
+.ev-sec{margin-bottom:12px;}
+.ev-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:11px;border:1px solid #EFEFEF;border-radius:8px;overflow:hidden;}
+.ev-tbl th{padding:8px 10px;background:#F8F8FA;font-weight:700;color:#636366;font-size:9px;text-transform:uppercase;letter-spacing:.4px;text-align:left;border-bottom:1px solid #EFEFEF;}
+.ev-tbl td{padding:8px 10px;border-bottom:1px solid #F8F8FA;color:#1D1D1F;}
+.ev-tbl tr:last-child td{border-bottom:none;}
+.ev-tbl tr:hover{background:#FAFBFC;}
+.ev-g{display:inline-flex;width:22px;height:22px;border-radius:5px;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;}
+
+/* Clinical alert */
+.clin-box{padding:14px 16px;border-radius:10px;border-left:4px solid #C62828;background:linear-gradient(135deg,#FFF5F5,#fff);margin-bottom:12px;}
+.clin-title{font-size:12px;font-weight:800;color:#C62828;margin-bottom:8px;display:flex;align-items:center;gap:5px;}
+.clin-item{font-size:11px;line-height:2;color:#1D1D1F;padding-left:12px;position:relative;}
+.clin-item::before{content:'›';position:absolute;left:3px;color:#C62828;font-weight:800;font-size:13px;}
+.clin-item strong{color:#C62828;font-weight:800;}
+
+/* Meta + buttons */
+.rpt-meta{display:flex;gap:8px;font-size:10px;color:#AEAEB2;padding:8px 0;border-top:1px solid #F5F5F5;flex-wrap:wrap;margin-bottom:8px;}
+.rpt-footer{display:flex;gap:8px;}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:99;display:none;}.overlay.show{display:block;}
+.popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg);border:1.5px solid var(--bd);border-radius:14px;padding:20px;width:460px;max-height:360px;overflow-y:auto;z-index:100;box-shadow:0 16px 48px rgba(0,0,0,.12);display:none;}.popup.show{display:block;}
+.popup .hl{background:var(--amber-bg);padding:2px 5px;border-radius:4px;font-weight:600;color:var(--bold);}
+.pcl{position:absolute;top:10px;right:14px;cursor:pointer;font-size:16px;color:var(--gray);}
+
+.bts{height:30px;border-top:1px solid var(--bd);display:flex;align-items:center;padding:0 14px;font-size:9px;color:var(--gray);gap:8px;font-family:'JetBrains Mono',monospace;flex-shrink:0;background:var(--sf);}
+.bts .sbar{width:60px;height:4px;background:var(--bd);border-radius:2px;overflow:hidden;}
+.bts .sbar div{height:100%;background:var(--green);border-radius:2px;transition:width .5s ease;}
+
+/* [v20] Step body 순차 표시 */
+.step-body{opacity:1;transition:opacity .3s;}
+.step-item.pending-vis .step-body{opacity:.4;}
+.step-item.pending-vis .step-summary{visibility:hidden;}
+
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.6;}}
+@keyframes dots{0%{content:''}33%{content:'.'}66%{content:'..'}100%{content:'...'}}
+.loading-dots::after{content:'';animation:dots 1.2s infinite;}
+/* [v18] 순차 표시 애니메이션 */
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.fade-in{opacity:0;animation:fadeSlideIn .35s ease forwards;}
+.fd1{animation-delay:.3s;}.fd2{animation-delay:.6s;}.fd3{animation-delay:.9s;}
+.fd4{animation-delay:1.2s;}.fd5{animation-delay:1.5s;}.fd6{animation-delay:1.8s;}
+.fd7{animation-delay:2.1s;}.fd8{animation-delay:2.4s;}.fd9{animation-delay:2.7s;}
+
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+
+/* [v6] Planning Agent 블록 */
+.plan-block{background:var(--blue-bg2);border:1px solid var(--blue-bg);border-radius:var(--r);padding:8px 12px;margin-bottom:8px;}
+.plan-block .plan-title{font-size:10px;font-weight:700;color:var(--bold);margin-bottom:4px;display:flex;align-items:center;gap:4px;}
+.plan-block .plan-steps{font-size:10px;color:var(--base);line-height:1.6;}
+
+/* [v6] Thinking 접이식 */
+.think-block{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:8px;overflow:hidden;}
+.think-toggle{padding:6px 10px;font-size:10px;color:var(--gray);cursor:pointer;display:flex;align-items:center;gap:4px;font-weight:500;}
+.think-toggle:hover{background:var(--bg);}
+.think-body{padding:0 10px 8px;font-size:10px;color:var(--gray);line-height:1.5;display:none;font-style:italic;}
+.think-body.op{display:block;}
+
+/* [v6] Free 우측 4탭 */
+.frTabs{display:flex;border-bottom:1px solid var(--bd);padding:0 12px;gap:2px;background:var(--bg);flex-shrink:0;}
+.frTab{padding:8px 12px;font-size:10px;font-weight:500;cursor:pointer;border:none;background:0;color:var(--gray);font-family:inherit;transition:.12s;border-bottom:2px solid transparent;}
+.frTab.on{color:var(--bold);font-weight:600;border-bottom-color:var(--blue);}
+.frTab:hover{color:var(--base);}
+.frPane{flex:1;overflow-y:auto;padding:12px;display:none;}
+.frPane.on{display:block;}
+.code-block{background:#1E1E2E;border:1px solid var(--bd);border-radius:var(--r);padding:14px 16px;font-family:'JetBrains Mono','Fira Code',monospace;font-size:11px;line-height:1.7;color:#CDD6F4;white-space:pre-wrap;overflow-x:auto;}
+.hl-kw{color:#CBA6F7;font-weight:600;}
+.hl-fn{color:#89B4FA;}
+.hl-str{color:#A6E3A1;}
+.hl-num{color:#FAB387;}
+.hl-cmt{color:#6C7086;font-style:italic;}
+.hl-op{color:#89DCEB;}
+.hl-cls{color:#F9E2AF;}
+.hl-dec{color:#F38BA8;}
+.hl-self{color:#CBA6F7;font-style:italic;}
+.graph-placeholder{display:flex;align-items:center;justify-content:center;height:200px;border:1px dashed var(--bd);border-radius:var(--r);color:var(--gray);font-size:11px;}
+
+/* [v21] P3-1: Visual Graph */
+.graph-canvas{width:100%;height:100%;min-height:280px;position:relative;}
+#frGraph{position:relative;}
+.graph-canvas svg{width:100%;height:100%;}
+.graph-node{cursor:pointer;}
+.graph-node:hover rect{filter:brightness(0.95);}
+.graph-edge{stroke:#D5D5DA;stroke-width:1;fill:none;transition:stroke .4s,stroke-width .3s;}
+.graph-edge.running{stroke:#5B93BA;stroke-width:1.5;stroke-dasharray:6 3;animation:dashFlow .8s linear infinite;}
+.graph-edge.done{stroke:#5EA87D;stroke-width:1.5;stroke-dasharray:none;animation:none;}
+@keyframes dashFlow{to{stroke-dashoffset:-9;}}
+.graph-label{font-size:9px;font-family:-apple-system,'Noto Sans KR',sans-serif;fill:var(--base);text-anchor:middle;pointer-events:none;}
+.graph-badge{font-size:7px;font-family:-apple-system,'Noto Sans KR',sans-serif;fill:var(--base);text-anchor:middle;pointer-events:none;font-weight:600;}
+.graph-status{font-size:8px;font-family:'JetBrains Mono',monospace;text-anchor:middle;pointer-events:none;}
+
+/* [v21] P3-4: Failure Taxonomy */
+
+/* [v22] P3-6: Language Toggle */
+.lang-sw{display:flex;border:1px solid var(--bd);border-radius:6px;overflow:hidden;margin-left:6px;height:26px;}
+.lang-sw button{padding:0 8px;border:none;background:0;font-size:9px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--gray);transition:.15s;}
+.lang-sw button.on{background:var(--blue-bg);color:var(--bold);font-weight:600;}
+.lang-sw button:hover:not(.on){background:var(--sf);}
+
+/* [v22] P3-2: Guided 자동 실행 */
+.gFt-run{display:flex;gap:6px;align-items:center;}
+.auto-run-bar{height:3px;background:var(--bd);border-radius:2px;overflow:hidden;margin:0 12px 4px;}
+.auto-run-bar div{height:100%;background:var(--blue);border-radius:2px;transition:width .4s ease;width:0%;}
+/* [v23] 세그먼트 진행바 */
+.auto-seg{display:flex;gap:2px;padding:4px 12px 6px;align-items:center;border-bottom:1px solid var(--bd);background:var(--sf);}
+.auto-seg .seg{flex:1;height:4px;border-radius:2px;background:var(--bd);transition:background .3s;}
+.auto-seg .seg.done{background:var(--green);}
+.auto-seg .seg.cur{background:var(--blue);animation:pulse 1s infinite;}
+.auto-seg .seg-label{font-size:8px;color:var(--gray);margin-left:6px;white-space:nowrap;font-family:'JetBrains Mono',monospace;}
+
+/* [v23] Fix 3: 리사이즈 핸들 */
+.resize-handle{width:5px;cursor:col-resize;background:transparent;position:relative;flex-shrink:0;z-index:5;transition:background .15s;}
+.resize-handle:hover,.resize-handle.active{background:var(--blue-bg);}
+.resize-handle::after{content:'';position:absolute;top:50%;left:1px;transform:translateY(-50%);width:3px;height:28px;border-radius:2px;background:var(--bd);transition:background .15s;}
+.resize-handle:hover::after,.resize-handle.active::after{background:var(--blue);}
+
+.ftx-panel{position:absolute;top:8px;right:8px;width:200px;z-index:10;opacity:0;transform:translateX(10px);transition:all .3s ease;pointer-events:none;}
+.ftx-panel.show{opacity:1;transform:translateX(0);pointer-events:auto;}
+.ftx-card{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.08);}
+.ftx-hdr{padding:6px 10px;background:var(--sf);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;}
+.ftx-hdr span{font-size:9px;font-weight:600;color:var(--bold);}
+.ftx-hdr .ftx-close{width:16px;height:16px;border:none;background:none;cursor:pointer;color:var(--gray);font-size:11px;}
+.ftx-body{padding:8px;max-height:200px;overflow-y:auto;}
+.ftx-item{padding:5px 8px;border-radius:6px;margin-bottom:4px;font-size:9px;line-height:1.4;display:flex;align-items:flex-start;gap:5px;animation:fadeIn .2s ease;}
+.ftx-item.env{background:#FFF1F0;border:1px solid #FECACA;color:#991B1B;}
+.ftx-item.tool{background:#FEFCE8;border:1px solid #FDE68A;color:#92400E;}
+.ftx-item.config{background:#F5F3FF;border:1px solid #DDD6FE;color:#5B21B6;}
+.ftx-item.reason{background:#EFF6FF;border:1px solid #BFDBFE;color:#1E40AF;}
+.ftx-item .ftx-icon{flex-shrink:0;font-size:10px;}
+.ftx-item .ftx-text{flex:1;}
+.ftx-item .ftx-status{font-size:8px;font-weight:600;padding:1px 4px;border-radius:3px;flex-shrink:0;white-space:nowrap;}
+.ftx-status.recovering{background:var(--amber-bg);color:var(--base);}
+.ftx-status.recovered{background:var(--green-bg);color:var(--base);}
+.ftx-count{display:flex;gap:6px;padding:6px 8px;border-top:1px solid var(--bd);background:var(--sf);}
+.ftx-count .fc{flex:1;text-align:center;font-size:8px;color:var(--gray);}
+.ftx-count .fc .n{font-size:12px;font-weight:700;color:var(--bold);display:block;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="toolbar">
+    <div class="logo">R</div>
+    <button class="tb" onclick="toggleSide('projects')" title="프로젝트"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg></button>
+    <button class="tb on" onclick="toggleSide(null)" title="홈"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 12l9-8 9 8M5 10v10h4v-6h6v6h4V10"/></svg></button>
+    <button class="tb" onclick="toggleSide('history')" title="대화 기록"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+    <button class="tb" title="모니터링"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg></button>
+    <div class="sp"></div>
+    <button class="tb" title="API 키"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.74 5.74L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.59a1 1 0 01.29-.7l6.97-6.97A6 6 0 0121 9z"/></svg></button>
+    <button class="tb" title="설정"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M10.3 4.9a2 2 0 013.4 0l.7 1.1a2 2 0 001.5.8l1.3.1a2 2 0 011.7 2.4l-.3 1.3a2 2 0 00.4 1.6l.8 1a2 2 0 01-.6 2.9l-1.1.7a2 2 0 00-.9 1.4l-.2 1.3a2 2 0 01-2.5 1.6l-1.2-.4a2 2 0 00-1.6.2l-1 .7a2 2 0 01-2.8-.8l-.5-1.2a2 2 0 00-1.2-1.1l-1.3-.3a2 2 0 01-1.4-2.6l.5-1.2a2 2 0 000-1.7l-.5-1.2a2 2 0 011.4-2.6l1.3-.3a2 2 0 001.2-1l.5-1.3z"/><circle cx="12" cy="12" r="3"/></svg></button>
+  </div>
+  <!-- [v6] 프로젝트 사이드패널 -->
+  <div class="side-panel" id="sidePanel">
+    <div class="panel-header">
+      <span class="panel-title" id="panelTitle">프로젝트</span>
+      <button class="close-btn" onclick="toggleSide(null)">✕</button>
+    </div>
+    <div class="panel-body" id="panelBody"></div>
+  </div>
+  <div class="main">
+    <div class="hdr">
+      <div class="tit">AIGEN R0 BioAgent</div>
+      <select class="sel"><optgroup label="로컬 vLLM"><option>Biomni-R0-32B (8091)</option><option>Qwen3-32B-GDPO (8092)</option></optgroup><optgroup label="API"><option>GPT-4o</option><option>Claude Sonnet 4</option></optgroup></select>
+      <div class="msw">
+        <div class="msl free" id="msl"></div>
+        <button class="on" id="bFree" onclick="setMode('free')">Free Chat</button>
+        <button id="bGuid" onclick="setMode('guided')">Guided</button>
+      </div>
+      <!-- [v22] 언어 토글 -->
+      <div class="lang-sw" id="langSw">
+        <button class="on" id="lKo" onclick="setLang('ko')">한국어</button>
+        <button id="lEn" onclick="setLang('en')">EN</button>
+      </div>
+    </div>
+    <div class="cnt">
+      <!-- FREE -->
+      <div class="freeM" id="freeM">
+        <div class="chat">
+          <div class="msgs" id="chatMsgs">
+            <!-- 빈 상태: 실행 시 동적으로 채워짐 -->
+            <div id="emptyState" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--gray);text-align:center;padding:40px;">
+              <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24" style="margin-bottom:8px;opacity:.4;"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+              <div style="font-size:12px;font-weight:500;" class="i18n" data-key="emptyTitle">질문을 입력하면 분석을 시작합니다</div>
+              <div style="font-size:10px;margin-top:4px;" class="i18n" data-key="emptySub">아래 입력창에 질문을 입력하고 전송하세요</div>
+            </div>
+          </div>
+          <div class="cia">
+            <div class="attach-preview" id="attachPrev">
+              <img id="attachImg" src="">
+              <button class="rm" onclick="clearAttach()">✕</button>
+            </div>
+            <div class="ciw">
+              <button class="att" onclick="document.getElementById('fileIn').click()" title="이미지 첨부"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg></button>
+              <input type="file" accept="image/*" class="hidden-input" id="fileIn" onchange="handleAttach(this)">
+              <textarea class="ci" id="chatInput" placeholder="자유 질의..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}">BRCA1 변이의 유방암 위험도를 분석해줘</textarea>
+              <button class="snd" id="sendBtn" onclick="sendMessage()">↑</button>
+            </div>
+          </div>
+        </div>
+        <!-- [v23] 리사이즈 핸들 -->
+        <div class="resize-handle" id="freeResize" onmousedown="startResize(event,'free')"></div>
+        <div class="fRight">
+          <div class="frTabs">
+            <button class="frTab on" onclick="swFrTab('steps')">Steps</button>
+            <button class="frTab" onclick="swFrTab('code')">Code</button>
+            <button class="frTab" onclick="swFrTab('results')">Results</button>
+            <button class="frTab" onclick="swFrTab('graph')">Graph</button>
+          </div>
+          <div class="frPane on" id="frSteps"><div id="freeSteps"><div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--gray);font-size:11px;" class="i18n" data-key="waitExec">실행 대기 중</div></div></div>
+          <div class="frPane" id="frCode"><div class="code-block" id="codeView"><span class="hl-cmt">// 실행 시 코드가 표시됩니다</span></div></div>
+          <div class="frPane" id="frResults"><div id="resultsView" style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--gray);font-size:11px;" class="i18n" data-key="waitResult">실행 완료 후 결과가 표시됩니다</div></div>
+          <div class="frPane" id="frGraph"><div class="graph-canvas" id="graphCanvas"><svg id="graphSvg" viewBox="0 0 520 310"></svg></div>
+            <!-- [v21] Failure Taxonomy 패널 -->
+            <div class="ftx-panel" id="ftxPanel">
+              <div class="ftx-card">
+                <div class="ftx-hdr"><span>⚠ Failure Taxonomy</span><button class="ftx-close" onclick="document.getElementById('ftxPanel').classList.remove('show')">✕</button></div>
+                <div class="ftx-body" id="ftxBody"></div>
+                <div class="ftx-count" id="ftxCount"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- GUIDED -->
+      <div class="guidM hide" id="guidM">
+        <div class="gL">
+          <div class="gProg" id="gProg"></div>
+          <!-- [v24] 세그먼트 진행바 — 상단 위치 -->
+          <div class="auto-seg" id="gAutoSeg" style="display:none;">
+            <div class="seg" id="gSeg1"></div><div class="seg" id="gSeg2"></div><div class="seg" id="gSeg3"></div>
+            <div class="seg" id="gSeg4"></div><div class="seg" id="gSeg5"></div><div class="seg" id="gSeg6"></div>
+            <span class="seg-label" id="gSegLbl">0/6</span>
+          </div>
+          <div class="gCnt" id="gCnt"></div>
+          <div class="gFt">
+            <button class="btn" id="gP" onclick="gPrev()">← <span class="i18n" data-key="prev">이전</span></button>
+            <span style="font-size:10px;color:var(--gray);" id="gLb"></span>
+            <button class="btn pri" id="gN" onclick="gNext()"><span class="i18n" data-key="next">다음</span> →</button>
+            <!-- [v22] 자동 실행 버튼 -->
+            <button class="btn suc" id="gAutoBtn" onclick="guidedAutoRun()" style="margin-left:6px;"><svg width="10" height="10" fill="currentColor" viewBox="0 0 24 24" style="vertical-align:middle;"><polygon points="5,3 19,12 5,21"/></svg> <span class="i18n" data-key="autoRun">자동 실행</span></button>
+          </div>
+        </div>
+        <!-- [v23] Guided 리사이즈 핸들 -->
+        <div class="resize-handle" id="guidResize" onmousedown="startResize(event,'guided')"></div>
+        <div class="gR">
+          <div class="grTabs">
+            <button class="grt on" id="grt_res" onclick="swGr('res')"><span class="i18n" data-key="results">결과</span></button>
+            <button class="grt" id="grt_mx" onclick="swGr('mx')">Matrix</button>
+            <button class="grt" id="grt_chat" onclick="swGr('chat')">Chat</button>
+          </div>
+          <div class="grP on" id="grRes"><div id="grResCnt"></div></div>
+          <div class="grP" id="grMx">
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+              <span style="font-size:10px;color:var(--gray);" class="i18n" data-key="scoreFilter">점수 필터:</span>
+              <input type="range" min="0" max="100" value="67" id="mxSl2" style="flex:1;accent-color:var(--blue);" oninput="S.scoreMin=+this.value;document.getElementById('mxV2').textContent=this.value;renderMx2();">
+              <span style="font-size:11px;font-weight:700;color:var(--bold);width:24px;" id="mxV2">67</span>
+            </div>
+            <div id="mxTbl2"></div>
+          </div>
+          <div class="grP" id="grChat">
+            <div class="miniC">
+              <div class="miniMsgs" id="miniMsgs">
+                <div class="m ai"><div class="bb" style="font-size:11px;"><div class="nm" style="font-size:9px;">R0</div>Guided 모드에서 궁금한 점을 여기서 질문하세요.</div></div>
+              </div>
+              <div class="miniIn"><input class="miniInp" placeholder="워크플로 관련 질문..." data-placeholder-ko="워크플로 관련 질문..." data-placeholder-en="Workflow questions..."></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bts">
+      <span class="i18n" data-key="confidence">신뢰도:</span>
+      <div class="sbar"><div id="confBar" style="width:0%;"></div></div>
+      <span style="font-weight:600;color:var(--base);" id="confVal">—</span>
+      <span style="color:var(--bd);">·</span><span id="timer">⏱ 00:00</span>
+      <span style="color:var(--bd);">·</span><span id="tokenInfo" class="i18n" data-key="standby">대기 중</span>
+      <span style="color:var(--bd);">·</span><span id="costInfo">$0.00</span>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="ovl" onclick="closeEv()"></div>
+<div class="popup" id="evPop"><span class="pcl" onclick="closeEv()">✕</span><div id="evCnt"></div></div>
+
+
+<script>
+/* ===== [NEW] 이미지 첨부 기능 ===== */
+function handleAttach(input){
+  if(!input.files||!input.files[0])return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    document.getElementById('attachImg').src=e.target.result;
+    document.getElementById('attachPrev').classList.add('show');
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+function clearAttach(){
+  document.getElementById('attachPrev').classList.remove('show');
+  document.getElementById('attachImg').src='';
+  document.getElementById('fileIn').value='';
+}
+
+var executionDone=false;
+window._ftxTriggered=false;
+
+var STEP_ANSWERS={
+  0:['VUS 변이를 포함하면 총 1,593건이지만, 임상적 의미가 불확실하여 제외했습니다.','c.5266dupC는 Ashkenazi Jewish 인구에서 가장 빈번하게 발견되는 founder mutation입니다.','Likely pathogenic 89건은 별도 추적 대상이며, 최종 분류 확정 시 반영됩니다.'],
+  1:['P-value ranking은 MAF 대비 통계적 유의성이 높은 변이를 우선 선별하는 방식입니다.','95% CI가 1을 포함하지 않으므로 통계적으로 유의한 결과입니다.','LD block 분석은 연관된 SNP 간의 연쇄 불균형 구조를 파악하는 데 사용됩니다.'],
+  2:['최신 5년 이내 논문만 필터링하면 28편으로 줄어듭니다. 전체 42편 유지를 권장합니다.','메타분석 4편, RCT 2편, 전향적 코호트 12편이 포함되어 있습니다.','근거 수준(Level of Evidence) I~II에 해당하는 논문이 18편입니다.'],
+  3:['신뢰도 94%는 (근거 문헌 수 × 일관성 × OR 유의성)의 가중 평균입니다.','예방적 수술 외에도 PARP 억제제 등 표적 치료 옵션이 있습니다.','난소암 45% 위험도는 70세까지의 누적 발생률 기준입니다.']
+};
+var stepQIdx={};
+
+/* [v25] Python 구문 하이라이팅 */
+function highlightPy(code){
+  var esc=code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  var ph=[];
+  function hold(cls,txt){var k='_PH'+ph.length+'_';ph.push({k:k,v:'<span class="'+cls+'">'+txt+'</span>'});return k;}
+  esc=esc.replace(/#[^\n]*/g,function(m){return hold('hl-cmt',m);});
+  esc=esc.replace(/"""[\s\S]*?"""|'''[\s\S]*?'''/g,function(m){return hold('hl-str',m);});
+  esc=esc.replace(/f?&quot;[^&]*&quot;|f?&#39;[^&]*&#39;/g,function(m){return hold('hl-str',m);});
+  esc=esc.replace(/f?"[^"]*"|f?'[^']*'/g,function(m){return hold('hl-str',m);});
+  esc=esc.replace(/\b(import|from|as|def|class|return|if|elif|else|for|in|while|try|except|with|yield|lambda|not|and|or|is|None|True|False|raise|pass|break|continue)\b/g,function(m){return hold('hl-kw',m);});
+  esc=esc.replace(/\b(print|len|range|sorted|int|float|str|list|dict|set|type|isinstance|enumerate|zip|map|filter|open|json)\b(?=\s*\()/g,function(m){return hold('hl-fn',m);});
+  esc=esc.replace(/\.(\w+)\s*\(/g,function(m,name){return '.'+hold('hl-fn',name)+'(';});
+  esc=esc.replace(/\b(\d+\.?\d*(?:e[+-]?\d+)?)\b/g,function(m){return hold('hl-num',m);});
+  esc=esc.replace(/\b(self)\b/g,function(m){return hold('hl-self',m);});
+  for(var i=ph.length-1;i>=0;i--){esc=esc.split(ph[i].k).join(ph[i].v);}
+  return esc;
+}
+
+var STEPS=[
+  {t:'ClinVar 데이터베이스 조회',summary:'346개 pathogenic 변이 확인',tm:1200,tool:'ClinVar',toolCls:'clinvar',
+    refs:['Data Lake','ClinVar API'],
+    findings:'346개 검색 완료 — 임상적 의미 기반 핵심 발견:',
+    items:['pathogenic 346건, likely pathogenic 89건 확인','BRCA1 c.5266dupC (5382insC) — 가장 빈번한 변이','VUS(의미불명) 1,247건은 제외 처리'],
+    code:'# Step 1: ClinVar Query\nimport requests\n\nurl = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"\nparams = {"db":"clinvar","term":"BRCA1[gene] AND pathogenic[clinsig]","retmax":500}\nresp = requests.get(url, params=params)\nresult = resp.json()\nprint(f"Found {result[\"esearchresult\"][\"count\"]} variants")',
+    tokens:820},
+  {t:'GWAS Catalog 위험도 검색',summary:'OR=5.2 (95% CI: 3.8-7.1)',tm:1400,tool:'GWAS',toolCls:'gwas',
+    refs:['GWAS Catalog'],
+    findings:'위험도 검색 완료 — Population-level 통계:',
+    items:['유방암 OR=5.2 (95% CI: 3.8-7.1), p=2.3e-15','난소암 OR=8.1 (95% CI: 5.2-12.6)','연관 SNP rs80357906 — LD block 분석 포함'],
+    code:'# Step 2: GWAS Catalog API\ngwas_url = "https://www.ebi.ac.uk/gwas/rest/api"\nparams = {"gene":"BRCA1","pvalueLimit":"5e-8"}\nassociations = requests.get(f"{gwas_url}/associations", params=params)\n\n# P-value ranking (not MAF)\nsorted_snps = sorted(data, key=lambda x: x["pValue"])\nprint(f"Top SNP: {sorted_snps[0][\"rsId\"]} OR={sorted_snps[0][\"orPerCopyNum\"]}")',
+    tokens:650},
+  {t:'문헌 근거 수집',summary:'42편 근거 추출 완료',tm:2000,tool:'PubMed',toolCls:'pubmed',
+    refs:['PubMed API','Data Lake'],
+    findings:'42편 검색 완료 — 최신 논문 기반 핵심 발견:',
+    items:['Chen et al. (2024): TOX-NR4A 축이 T세포 고갈의 핵심 조절자','Wei et al. (2023): CRISPR 스크린으로 BATF, IRF4 등 32개 유전자 식별','Sade-Feldman (2023): PD1CD1, LAG3, HAVCR2 삼중 체크포인트 시너지 확인'],
+    code:'# Step 3: PubMed Literature Search\nfrom Bio import Entrez\nEntrez.email = "agent@aigen.bio"\n\nhandle = Entrez.esearch(db="pubmed",\n  term="BRCA1 breast cancer risk pathogenic variant",\n  retmax=100, sort="relevance")\nresults = Entrez.read(handle)\nprint(f"Found {results[\"Count\"]} articles")\n\n# Fetch abstracts for top 42\nfor pmid in results["IdList"][:42]:\n    record = Entrez.efetch(db="pubmed", id=pmid, rettype="abstract")',
+    tokens:1240},
+  {t:'위험도 종합 보고',summary:'생애 유방암 ~70%, 난소암 ~45%',tm:1500,tool:'Analyze',toolCls:'analyze',
+    refs:[],
+    findings:'종합 분석 완료:',
+    items:['BRCA1 pathogenic 변이 보유 시 생애 유방암 위험도 약 70%','난소암 위험도 약 45%','예방적 수술(prophylactic mastectomy) 시 위험도 90% 이상 감소'],
+    code:'# Step 4: Risk Synthesis\nrisk_data = {\n  "breast_cancer_lifetime": 0.70,\n  "ovarian_cancer_lifetime": 0.45,\n  "odds_ratio": 5.2,\n  "ci_95": [3.8, 7.1],\n  "evidence_articles": 42,\n  "pathogenic_variants": 346\n}\n\nconfidence = calculate_confidence(risk_data)\nprint(f"Confidence: {confidence}%")\ngenerate_report(risk_data)',
+    tokens:580}
+];
+
+STEPS.forEach(function(s,i){stepQIdx[i]=0;});
+
+/* ===== [v18] sendMessage — innerHTML+= 완전 제거 ===== */
+function sendMessage(){
+  var input=document.getElementById('chatInput');
+  var query=input.value.trim();
+  if(!query)return;
+
+  if(!executionDone){
+    startExecution();
+    return;
+  }
+
+  /* 후속 질문 — createElement 전용 [v18] */
+  var msgs=document.getElementById('chatMsgs');
+  var uMsg=document.createElement('div');uMsg.className='m u';
+  var uBb=document.createElement('div');uBb.className='bb';uBb.textContent=query;
+  uMsg.appendChild(uBb);msgs.appendChild(uMsg);
+  input.value='';scrollChat();
+
+  var stepMatch=query.match(/\[Step (\d+)/);
+  var stepIdx=stepMatch?parseInt(stepMatch[1])-1:-1;
+
+  /* 로딩 — createElement [v18] */
+  var loadMsg=document.createElement('div');loadMsg.className='m ai';
+  var loadBb=document.createElement('div');loadBb.className='bb';
+  var loadNm=document.createElement('div');loadNm.className='nm';loadNm.textContent='R0';
+  var loadBody=document.createElement('div');
+  loadBody.style.cssText='display:flex;align-items:center;gap:6px;color:var(--gray);font-size:11px;';
+  var sp=document.createElement('div');sp.className='retry-spinner';
+  loadBody.appendChild(sp);loadBody.appendChild(document.createTextNode(' 답변 생성 중...'));
+  loadBb.appendChild(loadNm);loadBb.appendChild(loadBody);
+  loadMsg.appendChild(loadBb);msgs.appendChild(loadMsg);scrollChat();
+
+  setTimeout(function(){
+    var answer='';
+    if(stepIdx>=0&&stepIdx<STEPS.length){
+      var qi=stepQIdx[stepIdx]%STEP_ANSWERS[stepIdx].length;
+      answer='<span style="display:inline-flex;padding:1px 5px;border-radius:4px;font-size:8px;font-weight:600;background:var(--blue-bg);margin-right:4px;">Step '+(stepIdx+1)+'</span> '+STEP_ANSWERS[stepIdx][qi];
+      stepQIdx[stepIdx]++;
+    }else{
+      answer='BRCA1 분석 결과에 대해 추가 궁금한 점이 있으시면 말씀해주세요. 특정 Step에 대한 질문은 Step 옆의 질문 버튼을 활용하시면 해당 Step 컨텍스트가 자동으로 포함됩니다.';
+    }
+    var newNm=document.createElement('div');newNm.className='nm';newNm.textContent='R0';
+    var newBody=document.createElement('div');newBody.style.cssText='font-size:11px;line-height:1.6;';newBody.innerHTML=answer;
+    var newBb=document.createElement('div');newBb.className='bb';
+    newBb.appendChild(newNm);newBb.appendChild(newBody);
+    loadMsg.innerHTML='';loadMsg.appendChild(newBb);scrollChat();
+  },1200);
+}
+
+/* ===== [v18] 실행 — 동기 렌더링 + CSS animation-delay ===== */
+/* 핵심: setInterval 상태머신 제거, 전체 DOM 한번에 생성 */
+/* innerHTML+= 완전 금지, createElement + appendChild 전용 */
+var isRunning=false;
+var timerInterval=null;
+var elapsedSec=0;
+var totalTokens=0;
+
+function startExecution(){
+  if(isRunning)return;
+  var input=document.getElementById('chatInput');
+  var query=input.value.trim();
+  if(!query)return;
+  isRunning=true;elapsedSec=0;totalTokens=0;
+
+  var msgs=document.getElementById('chatMsgs');
+  var empty=document.getElementById('emptyState');
+  if(empty)empty.style.display='none';
+
+  /* (0) 사용자 메시지 */
+  var uMsg=document.createElement('div');uMsg.className='m u';
+  var uBb=document.createElement('div');uBb.className='bb';uBb.textContent=query;
+  uMsg.appendChild(uBb);msgs.appendChild(uMsg);
+  input.value='';input.setAttribute('placeholder','분석 진행 중...');
+  document.getElementById('sendBtn').style.opacity='.4';
+
+  /* 타이머 */
+  timerInterval=setInterval(function(){
+    elapsedSec++;
+    var m=String(Math.floor(elapsedSec/60)).padStart(2,'0');
+    var ss=String(elapsedSec%60).padStart(2,'0');
+    document.getElementById('timer').textContent='\u23F1 '+m+':'+ss;
+  },1000);
+
+  /* Steps 패널 초기화 */
+  var freeSteps=document.getElementById('freeSteps');
+  freeSteps.innerHTML='';
+  var timeline=document.createElement('div');timeline.className='step-timeline';timeline.id='stepTimeline';
+  freeSteps.appendChild(timeline);
+  document.getElementById('codeView').innerHTML=highlightPy('// 실행 중...');
+
+  /* (1) R0 메시지 */
+  var aiMsg=document.createElement('div');aiMsg.className='m ai';
+  var aiBb=document.createElement('div');aiBb.className='bb';
+  var aiNm=document.createElement('div');aiNm.className='nm';aiNm.textContent='R0';
+  var aiContent=document.createElement('div');aiContent.id='aiContent';
+  var introText=document.createElement('div');introText.className='fade-in';
+  introText.textContent='분석 계획을 수립합니다...';
+  aiContent.appendChild(introText);
+
+  /* (2) Planning Agent — 숨김 생성 */
+  var planBlock=document.createElement('div');
+  planBlock.className='plan-block';planBlock.style.cssText='margin-top:8px;opacity:0;transition:opacity .3s;';
+  planBlock.innerHTML='<div class="plan-title"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="flex-shrink:0"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5h6m-6 9l2 2 4-4"/></svg> Planning Agent</div><div class="plan-steps">1. ClinVar에서 BRCA1 pathogenic 변이 조회<br>2. GWAS Catalog에서 위험도(OR) 검색<br>3. PubMed 문헌 근거 수집<br>4. 종합 위험도 보고서 생성</div>';
+  aiContent.appendChild(planBlock);
+
+  /* (3) Thinking — 숨김 생성 */
+  var thinkBlock=document.createElement('div');
+  thinkBlock.className='think-block';thinkBlock.style.cssText='margin-top:8px;opacity:0;transition:opacity .3s;';
+  thinkBlock.innerHTML='<div class="think-toggle"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="flex-shrink:0"><path d="M9.66 17h4.68M12 3a6 6 0 00-4 10.5V17h8v-3.5A6 6 0 0012 3z"/></svg> Thinking <span style="margin-left:auto;font-size:9px;">\u25B8</span></div><div class="think-body op" style="font-style:italic;">BRCA1은 종양억제유전자. pathogenic 변이 \u2192 HR 경로 손상 \u2192 유방암/난소암 위험 증가. ClinVar 변이 분류 확인 후 GWAS OR 조회, 문헌으로 보강.</div>';
+  thinkBlock.querySelector('.think-toggle').onclick=function(){this.nextElementSibling.classList.toggle('op');};
+  aiContent.appendChild(thinkBlock);
+
+  /* 완료 메시지 — 숨김 */
+  var doneBlock=document.createElement('div');doneBlock.id='execDoneMsg';
+  doneBlock.style.cssText='margin-top:8px;padding:8px 10px;background:var(--green-bg2);border:1px solid var(--green-bg);border-radius:var(--r);font-size:11px;opacity:0;transition:opacity .3s;';
+  doneBlock.textContent='\u2713 BRCA1 분석 완료. 우측 Results 탭에서 결과를 확인하세요.';
+  aiContent.appendChild(doneBlock);
+
+  aiBb.appendChild(aiNm);aiBb.appendChild(aiContent);
+  aiMsg.appendChild(aiBb);msgs.appendChild(aiMsg);
+
+  /* (4) Steps — pending 상태로 전체 생성 */
+  var tl=document.getElementById('stepTimeline');
+  STEPS.forEach(function(s,idx){
+    var item=document.createElement('div');
+    item.className='step-item fade-in fd'+(idx+3);item.id='stepItem'+idx;
+    var lineHtml=idx<STEPS.length-1?'<div class="step-line" id="stepLine'+idx+'"></div>':'';
+    item.innerHTML='<div class="step-line-col"><div class="step-dot pending" id="stepDot'+idx+'">'+(idx+1)+'</div>'+lineHtml+'</div><div class="step-body"><div class="step-header" onclick="toggleStep(this)"><span class="tool-badge '+s.toolCls+'">'+s.tool+'</span><span class="stit">'+s.t+'</span><span class="stm" id="stepTm'+idx+'">대기</span><span class="step-toggle" id="stepToggle'+idx+'"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span></div><div style="font-size:10px;color:var(--gray);margin-top:2px;display:flex;align-items:center;gap:6px;" id="stepSummary'+idx+'"></div></div>';
+    tl.appendChild(item);
+    var stepBody=item.querySelector('.step-body');
+    if(stepBody){
+      var detail=document.createElement('div');detail.className='step-detail';
+      var dh='<div class="finding-title">'+s.findings+'</div>';
+      s.items.forEach(function(it){dh+='<div class="finding-item"> '+it+'</div>';});
+      dh+='<div class="step-actions"><button onclick="event.stopPropagation();stepEdit('+idx+')"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.41-9.41a2 2 0 112.83 2.83L11.83 13H9v-2.83l8.59-8.58z"/></svg> 수정</button><button onclick="event.stopPropagation();stepRetry('+idx+')"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4 4v5h.58l.01-.01M20 20v-5h-.58M4.93 9A10 10 0 0119.07 5M19.07 15A10 10 0 014.93 19"/></svg> 재시도</button><button onclick="event.stopPropagation();stepExplain('+idx+')"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9.66 17h4.68M12 3a6 6 0 00-4 10.5V17h8v-3.5A6 6 0 0012 3z"/></svg> 설명</button><button onclick="event.stopPropagation();stepQuestion('+idx+')"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.42-4.03 8-9 8a9.86 9.86 0 01-4.26-.96L3 20l1.26-3.78A7.77 7.77 0 013 12c0-4.42 4.03-8 9-8s9 3.58 9 8z"/></svg> 질문</button></div>';
+      detail.innerHTML=dh;stepBody.appendChild(detail);
+    }
+  });
+  scrollChat();
+
+  /* ===== (5) 순차 진행 엔진 [v24 재설계] ===== */
+  /* 핵심 변경: setInterval → 독립 setTimeout 체인 */
+  /* 이유: Claude.ai 아티팩트 샌드박스가 ~5초 후 setInterval 강제 종료 */
+  /* 각 전환을 독립 setTimeout으로 예약 → 샌드박스 제한 회피 */
+  drawGraph();graphStates=[0,0,0,0];ftxItems=[];ftxCounts={env:0,tool:0,config:0,reason:0};window._ftxTriggered=false;
+  var tokAccum=0;
+
+  /* --- 헬퍼: Step을 running 상태로 전환 --- */
+  function stepRun(i){
+    try{
+      var s=STEPS[i];
+      var dot=document.getElementById('stepDot'+i);
+      if(dot){dot.className='step-dot running';dot.textContent=i+1;}
+      var tm=document.getElementById('stepTm'+i);
+      if(tm){tm.textContent='실행 중...';tm.style.color='';}
+      var prevLine=document.getElementById('stepLine'+(i-1));
+      if(prevLine)prevLine.className='step-line running';
+      document.getElementById('codeView').innerHTML=highlightPy(s.code);
+      updateGraphNode(i,1);
+      if(i===1&&!window._ftxTriggered){window._ftxTriggered=true;addFailure('tool','GWAS API timeout (5s) — 캐시 데이터로 전환',true);}
+      var pct=Math.round((i/STEPS.length)*90);
+      document.getElementById('confBar').style.width=pct+'%';
+      document.getElementById('confVal').textContent=pct+'%';
+    }catch(e){console.log('stepRun err',i,e);}
+  }
+
+  /* --- 헬퍼: Step을 done 상태로 전환 --- */
+  function stepDone(i){
+    try{
+      var s=STEPS[i];
+      tokAccum+=s.tokens;
+      var dot=document.getElementById('stepDot'+i);
+      if(dot){dot.className='step-dot done';dot.textContent='\u2713';}
+      var tm=document.getElementById('stepTm'+i);
+      if(tm){tm.textContent=(s.tm/1000).toFixed(1)+'s';tm.style.color='';}
+      var sum=document.getElementById('stepSummary'+i);
+      if(sum){sum.innerHTML=s.summary+s.refs.map(function(r){return '<span class="ref-label">'+r+'</span>';}).join('');}
+      var prevLine=document.getElementById('stepLine'+(i-1));
+      if(prevLine)prevLine.className='step-line done';
+      var tog=document.getElementById('stepToggle'+i);
+      if(tog)tog.classList.add('show');
+      updateGraphNode(i,2);
+      document.getElementById('tokenInfo').textContent='입력 3.3K / 출력 '+tokAccum+' 토큰';
+      document.getElementById('costInfo').textContent='-$'+(tokAccum*0.00001).toFixed(4);
+    }catch(e){console.log('stepDone err',i,e);}
+  }
+
+  /* --- 헬퍼: 최종 완료 처리 --- */
+  function finishExecution(){
+    try{
+      clearInterval(timerInterval);
+      isRunning=false;executionDone=true;totalTokens=tokAccum;
+      document.getElementById('confBar').style.width='94%';
+      document.getElementById('confVal').textContent='94%';
+      document.getElementById('sendBtn').style.opacity='1';
+      document.getElementById('chatInput').setAttribute('placeholder','추가 질문...');
+      var dm=document.getElementById('execDoneMsg');if(dm)dm.style.opacity='1';
+
+      /* [v25] Apple Health 스타일 링 차트 */
+      function ringChart(pct,color,size){
+        var s=size||120,r=s/2-8,cx=s/2,cy=s/2;
+        var circ=2*Math.PI*r;
+        var dash=circ*pct/100,gap=circ-dash;
+        return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 '+s+' '+s+'">'
+          +'<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="#F0F0F0" stroke-width="7"/>'
+          +'<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="7" stroke-linecap="round"'
+          +' stroke-dasharray="'+dash.toFixed(1)+' '+gap.toFixed(1)+'" transform="rotate(-90 '+cx+' '+cy+')"/>'
+          +'</svg>';
+      }
+
+      var rh='<div class="rpt">';
+
+      /* ── 히어로 카드 (Apple Health 화이트) ── */
+      rh+='<div class="rpt-hero">';
+      /* 헤더: 제목 + 위험 배지 */
+      rh+='<div class="rpt-hero-header"><div class="rpt-hero-left"><div class="rpt-hero-title">BRCA1 Variant Risk Assessment</div><div class="rpt-hero-sub">Biomni-R0-32B · '+elapsedSec+'s · '+tokAccum+' tokens</div></div>';
+      rh+='<div class="rpt-risk-pill"><span class="rpt-risk-dot"></span>HIGH RISK</div></div>';
+      /* 본문: 링 차트 + 주요 지표 */
+      rh+='<div class="rpt-hero-body">';
+      rh+='<div class="rpt-ring-area">'+ringChart(70,'#D32F2F',130)+'<div class="rpt-ring-center"><div class="rpt-ring-pct">70%</div><div class="rpt-ring-label">생애 유방암</div></div></div>';
+      rh+='<div class="rpt-metrics">';
+      rh+='<div class="rpt-metric"><div class="rpt-metric-val" style="color:#E65100;">~45%</div><div class="rpt-metric-info"><div class="rpt-metric-name">난소암 위험도</div><div class="rpt-metric-desc">일반 인구 대비 30배</div></div></div>';
+      rh+='<div class="rpt-metric"><div class="rpt-metric-val">5.2</div><div class="rpt-metric-info"><div class="rpt-metric-name">Odds Ratio</div><div class="rpt-metric-desc">95% CI: 3.8–7.1</div></div></div>';
+      rh+='</div></div>';
+      /* 신뢰도 바 */
+      rh+='<div class="rpt-conf-row"><span class="rpt-conf-label">신뢰도</span><div class="rpt-conf-bar-bg"><div class="rpt-conf-bar-fill" style="width:94%;"></div></div><span class="rpt-conf-val">94%</span></div>';
+      rh+='</div>';
+
+      /* ── 핵심 지표 ── */
+      rh+='<div class="sec-title">핵심 지표 요약</div>';
+      rh+='<div class="met-strip">';
+      rh+='<div class="met-card"><div class="met-v">346</div><div class="met-l">Pathogenic</div><div class="met-sub">병원성 변이</div></div>';
+      rh+='<div class="met-card"><div class="met-v" style="font-size:14px;">rs80357906</div><div class="met-l">Lead SNP</div><div class="met-sub">대표 변이 위치</div></div>';
+      rh+='<div class="met-card"><div class="met-v">2.3e⁻¹⁵</div><div class="met-l">P-value</div><div class="met-sub">통계적 유의수준</div></div>';
+      rh+='<div class="met-card"><div class="met-v">42</div><div class="met-l">Evidence</div><div class="met-sub">논문 근거 (메타 4편)</div></div>';
+      rh+='</div>';
+
+      /* ── 변이 분류 ── */
+      rh+='<div class="var-sec"><div class="sec-title">변이 분류 비율 · ClinVar 전체 1,682건</div>';
+      rh+='<div class="var-bar">';
+      rh+='<div style="width:20.6%;background:#C62828;border-radius:4px 0 0 4px;"></div>';
+      rh+='<div style="width:5.3%;background:#FF6F00;"></div>';
+      rh+='<div style="width:74.1%;background:#E0E0E0;border-radius:0 4px 4px 0;"></div>';
+      rh+='</div>';
+      rh+='<div class="var-legend">';
+      rh+='<span><span class="vdot" style="background:#C62828;"></span>Pathogenic 346 (22%)</span>';
+      rh+='<span><span class="vdot" style="background:#FF6F00;"></span>Likely P. 89 (5.7%)</span>';
+      rh+='<span><span class="vdot" style="background:#E0E0E0;"></span>VUS 1,247 제외</span>';
+      rh+='</div></div>';
+
+      /* ── 문헌 근거 ── */
+      rh+='<div class="ev-sec"><div class="sec-title">문헌 근거</div>';
+      rh+='<table class="ev-tbl"><thead><tr><th>문헌</th><th>유형</th><th>결과</th><th>등급</th></tr></thead><tbody>';
+      rh+='<tr><td><strong>Kuchenbaecker (2017)</strong></td><td>메타분석</td><td>72% cumulative risk</td><td><span class="ev-g" style="background:#1B5E20;">A</span></td></tr>';
+      rh+='<tr><td><strong>Chen & Parmigiani (2007)</strong></td><td>메타분석</td><td>65% penetrance</td><td><span class="ev-g" style="background:#2E7D32;">A</span></td></tr>';
+      rh+='<tr><td><strong>Antoniou et al. (2003)</strong></td><td>코호트</td><td>OR=5.5 (CI: 3.9-7.6)</td><td><span class="ev-g" style="background:#43A047;">B</span></td></tr>';
+      rh+='<tr><td><strong>NCCN v3.2025</strong></td><td>가이드라인</td><td>예방 수술 권고</td><td><span class="ev-g" style="background:#1B5E20;">A</span></td></tr>';
+      rh+='</tbody></table></div>';
+
+      /* ── 임상 권고 ── */
+      rh+='<div class="clin-box">';
+      rh+='<div class="clin-title"><svg width="11" height="11" fill="none" stroke="#C62828" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M5.07 19H19a2.12 2.12 0 001.83-3.18L13.83 4.3a2.12 2.12 0 00-3.66 0L3.24 15.82A2.12 2.12 0 005.07 19z"/></svg> 임상 권고사항</div>';
+      rh+='<div class="clin-item">예방적 수술(prophylactic mastectomy) 시 위험도 <strong>90% 이상 감소</strong></div>';
+      rh+='<div class="clin-item">PARP 억제제(Olaparib) 치료 적합 대상</div>';
+      rh+='<div class="clin-item">6개월 간격 MRI + 유방촬영 병행 감시</div>';
+      rh+='<div class="clin-item">1, 2차 친족 유전자 검사 권장</div>';
+      rh+='</div>';
+
+      /* ── 메타 + 버튼 ── */
+      rh+='<div class="rpt-meta"><span>⚙ Biomni-R0-32B</span><span>◎ 3,290 / '+tokAccum+' tok</span><span>⏱ '+elapsedSec+'s</span><span>⛁ Data Lake 59 DB</span></div>';
+      rh+='<div class="rpt-footer">';
+      rh+='<button class="btn pri" style="flex:1;font-size:10px;" onclick="exportResults(\'json\')"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="vertical-align:middle;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> JSON</button>';
+      rh+='<button class="btn" style="flex:1;font-size:10px;" onclick="exportResults(\'clipboard\')"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="vertical-align:middle;"><path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M16 3h2a2 2 0 012 2v8"/></svg> 복사</button>';
+      rh+='</div></div>';
+
+      var rv=document.getElementById('resultsView');
+      rv.style.cssText='';rv.innerHTML=rh;
+      var ld=document.querySelector('#stepItem3 .step-detail');if(ld)ld.classList.add('op');
+      var lt=document.getElementById('stepToggle3');if(lt)lt.classList.add('open');
+      setTimeout(function(){
+        swFrTab('results');
+        document.querySelectorAll('.frTab').forEach(function(b){b.classList.remove('on');});
+        document.querySelectorAll('.frTab')[2].classList.add('on');
+      },600);
+      scrollChat();
+    }catch(e){console.log('finish err',e);}
+  }
+
+  /* ===== 타임라인: 독립 setTimeout (총 ~3초) [v24] ===== */
+  /* 각 setTimeout은 독립 실행 — 하나가 실패해도 나머지 영향 없음 */
+  setTimeout(function(){planBlock.style.opacity='1';},250);
+  setTimeout(function(){thinkBlock.style.opacity='1';},450);
+
+  /* Step 0: ClinVar */
+  setTimeout(function(){stepRun(0);scrollChat();},600);
+  setTimeout(function(){stepDone(0);scrollChat();},1000);
+
+  /* Step 1: GWAS */
+  setTimeout(function(){stepRun(1);scrollChat();},1100);
+  setTimeout(function(){stepDone(1);scrollChat();},1500);
+
+  /* Step 2: PubMed */
+  setTimeout(function(){stepRun(2);scrollChat();},1600);
+  setTimeout(function(){stepDone(2);scrollChat();},2100);
+
+  /* Step 3: Analyze (최종) */
+  setTimeout(function(){stepRun(3);scrollChat();},2200);
+  setTimeout(function(){stepDone(3);scrollChat();},2600);
+
+  /* 완료 처리 */
+  setTimeout(function(){finishExecution();},2800);
+
+  scrollChat();
+}
+
+/* [v18] animType은 deprecated — 호환성만 유지 */
+function animType(el,text,speed,cb){if(cb)cb();}
+function typeText(elId,text,speed,cb){if(cb)cb();}
+
+function scrollChat(){
+  var msgs=document.getElementById('chatMsgs');
+  if(msgs)msgs.scrollTop=msgs.scrollHeight;
+}
+
+function toggleStep(el){
+  var detail=el.parentElement.querySelector('.step-detail');
+  var arrow=el.querySelector('.step-toggle');
+  if(detail){detail.classList.toggle('op');if(arrow)arrow.classList.toggle('open');}
+  /* [v19] Step 클릭 시 Code 탭에 해당 Step 코드 표시 */
+  var item=el.closest('.step-item');
+  if(item){
+    var idx=parseInt(item.id.replace('stepItem',''));
+    if(!isNaN(idx)&&STEPS[idx]){
+      document.getElementById('codeView').innerHTML=highlightPy(STEPS[idx].code);
+    }
+  }
+}
+
+/* [v13] Step 인터랙션 함수들 */
+var EXPLANATIONS=[
+  'ClinVar는 NCBI에서 운영하는 유전 변이-질환 관계 데이터베이스입니다. BRCA1 유전자에서 pathogenic으로 분류된 346개 변이를 조회했으며, 이 중 c.5266dupC가 가장 빈번합니다. VUS(Variant of Uncertain Significance)는 임상적 의미가 불확실하여 제외했습니다.',
+  'GWAS Catalog는 유전체 전장 연관 분석 결과를 모은 EBI 데이터베이스입니다. OR(Odds Ratio) 5.2는 BRCA1 변이 보유자가 비보유자 대비 유방암 발생 위험이 5.2배 높다는 의미입니다. 95% CI 3.8-7.1은 신뢰 구간으로, 통계적으로 유의합니다.',
+  'PubMed에서 "BRCA1 breast cancer risk pathogenic variant" 검색으로 42편의 관련 논문을 수집했습니다. 메타분석, RCT, 코호트 연구를 우선 선별하고, 최신 순으로 정렬하여 근거 수준이 높은 문헌을 확보했습니다.',
+  '4개 Step의 결과를 종합하여 위험도를 계산했습니다. ClinVar 변이 분류 + GWAS OR + 문헌 근거를 교차 검증하여 생애 유방암 ~70%, 난소암 ~45% 위험도를 도출했습니다. 신뢰도 94%는 근거 문헌 수와 일관성에 기반합니다.'
+];
+
+function removeInteract(idx){
+  var existing=document.querySelector('#stepItem'+idx+' .step-interact, #stepItem'+idx+' .step-explain, #stepItem'+idx+' .step-retry-anim');
+  if(existing)existing.remove();
+}
+
+function stepEdit(idx){
+  /* [v19] Cascade 진행 중이면 수정 차단 */
+  if(window._isCascading)return;
+  removeInteract(idx);
+  var detail=document.querySelector('#stepItem'+idx+' .step-detail');
+  if(!detail)return;
+  if(!detail.classList.contains('op')){detail.classList.add('op');var t=document.getElementById('stepToggle'+idx);if(t)t.classList.add('open');}
+  var div=document.createElement('div');div.className='step-interact';
+  div.innerHTML='<div class="si-title"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.41-9.41a2 2 0 112.83 2.83L11.83 13H9v-2.83l8.59-8.58z"/></svg> Step '+(idx+1)+' 수정</div><textarea placeholder="수정 지시사항 입력 (예: BRCA2도 포함해서 검색해줘)">'+STEPS[idx].t+' — 수정 사항을 입력하세요</textarea><div class="si-btns"><button onclick="this.closest(\'.step-interact\').remove()">취소</button><button class="pri" onclick="applyEdit('+idx+',this)">적용</button></div>';
+  detail.appendChild(div);
+}
+
+function applyEdit(idx,btn){
+  /* [v19] Cascade 중복 방지 */
+  if(window._isCascading)return;
+  window._isCascading=true;
+
+  var textarea=btn.closest('.step-interact').querySelector('textarea');
+  var val=textarea.value;
+  btn.closest('.step-interact').innerHTML='<div style="color:var(--green);font-weight:600;padding:4px 0;">✓ 수정 반영: '+val.substring(0,40)+'...</div>';
+  setTimeout(function(){removeInteract(idx);},1200);
+
+  // Dirty Cascade: 하위 Step들 재실행 필요 표시
+  var downstream=[];
+  for(var i=idx+1;i<STEPS.length;i++){downstream.push(i);}
+  if(downstream.length===0){window._isCascading=false;return;}
+
+  // 하위 Step에 dirty 표시
+  downstream.forEach(function(di){
+    var dot=document.getElementById('stepDot'+di);
+    if(dot){dot.className='step-dot dirty';dot.textContent='↻';dot.style.fontSize='12px';}
+    var tm=document.getElementById('stepTm'+di);
+    if(tm){tm.textContent='재실행 대기';tm.style.color='var(--amber)';}
+    var line=document.getElementById('stepLine'+(di-1));
+    if(line)line.className='step-line';
+  });
+
+  // 채팅에 Cascade 안내
+  var msgs=document.getElementById('chatMsgs');
+  var note=document.createElement('div');note.className='m ai';
+  note.innerHTML='<div class="bb"><div class="nm">R0</div><div style="background:var(--amber-bg2);border:1px solid var(--amber-bg);border-radius:var(--r);padding:6px 8px;font-size:10px;">↻ Step '+(idx+1)+' 수정으로 Step '+(idx+2)+'~'+STEPS.length+' 재실행이 필요합니다. 자동 재실행을 시작합니다...</div></div>';
+  msgs.appendChild(note);scrollChat();
+
+  // 1.5초 후 순차 재실행
+  setTimeout(function(){cascadeRerun(downstream,0);},1500);
+}
+
+function cascadeRerun(list,i){
+  if(i>=list.length){
+    // 완료 안내
+    var msgs=document.getElementById('chatMsgs');
+    var done=document.createElement('div');done.className='m ai';
+    done.innerHTML='<div class="bb"><div class="nm">R0</div><div style="background:var(--green-bg2);border:1px solid var(--green-bg);border-radius:var(--r);padding:6px 8px;font-size:10px;">✓ 하위 Step 재실행 완료. Results 탭이 업데이트되었습니다.</div></div>';
+    msgs.appendChild(done);scrollChat();
+    /* [v19] lock 해제 */
+    window._isCascading=false;
+    return;
+  }
+  var idx=list[i];
+  var s=STEPS[idx];
+  var dot=document.getElementById('stepDot'+idx);
+  var tm=document.getElementById('stepTm'+idx);
+  if(dot){dot.className='step-dot running';dot.textContent=idx+1;dot.style.fontSize='';}
+  if(tm){tm.textContent='재실행 중...';tm.style.color='';}
+  var line=document.getElementById('stepLine'+(idx-1));
+  if(line)line.className='step-line running';
+
+  setTimeout(function(){
+    if(dot){dot.className='step-dot done';dot.textContent='✓';}
+    if(tm){tm.textContent=(s.tm/1000).toFixed(1)+'s';}
+    if(line)line.className='step-line done';
+    setTimeout(function(){cascadeRerun(list,i+1);},300);
+  },s.tm*0.5); // 절반 속도로 재실행
+}
+
+function stepRetry(idx){
+  removeInteract(idx);
+  var detail=document.querySelector('#stepItem'+idx+' .step-detail');
+  if(!detail)return;
+  if(!detail.classList.contains('op')){detail.classList.add('op');var t=document.getElementById('stepToggle'+idx);if(t)t.classList.add('open');}
+  var div=document.createElement('div');div.className='step-retry-anim';
+  div.innerHTML='<div class="retry-spinner"></div> Step '+(idx+1)+' 재실행 중...';
+  detail.appendChild(div);
+  // dot을 running으로
+  var dot=document.getElementById('stepDot'+idx);
+  if(dot){dot.className='step-dot running';dot.textContent=idx+1;}
+  setTimeout(function(){
+    if(dot){dot.className='step-dot done';dot.textContent='✓';}
+    div.innerHTML='<span style="color:var(--green);font-weight:600;">✓ 재실행 완료</span> — 결과 동일 ('+STEPS[idx].summary+')';
+    div.className='step-retry-anim';div.style.borderColor='var(--green-bg)';div.style.background='var(--green-bg2)';
+    setTimeout(function(){removeInteract(idx);},2000);
+  },2000);
+}
+
+function stepExplain(idx){
+  removeInteract(idx);
+  var detail=document.querySelector('#stepItem'+idx+' .step-detail');
+  if(!detail)return;
+  if(!detail.classList.contains('op')){detail.classList.add('op');var t=document.getElementById('stepToggle'+idx);if(t)t.classList.add('open');}
+  var div=document.createElement('div');div.className='step-explain';
+  div.innerHTML='<div style="font-weight:600;color:var(--bold);margin-bottom:4px;display:flex;align-items:center;gap:4px;"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9.66 17h4.68M12 3a6 6 0 00-4 10.5V17h8v-3.5A6 6 0 0012 3z"/></svg> 설명</div>'+EXPLANATIONS[idx]+'<div style="margin-top:6px;text-align:right;"><button style="padding:2px 8px;border:1px solid var(--bd);border-radius:4px;font-size:9px;cursor:pointer;background:var(--bg);font-family:inherit;color:var(--gray);" onclick="this.closest(\'.step-explain\').remove()">닫기</button></div>';
+  detail.appendChild(div);
+}
+
+function stepQuestion(idx){
+  // Step 질문 → 채팅 input에 프리필
+  var input=document.getElementById('chatInput');
+  input.value='[Step '+(idx+1)+' '+STEPS[idx].t+'] ';
+  input.focus();
+  input.setSelectionRange(input.value.length,input.value.length);
+  // 스크롤 채팅 하단으로
+  scrollChat();
+}
+
+function askQuestion(idx){/* deprecated - 채팅으로 통합 */}
+
+/* ===== 기존 데이터 (변경 없음) ===== */
+const S={
+  proj:{name:'GLP-1 Emerging Therapy for MASH',desc:'GLP-1 기반 치료법이 MASH 및 간섬유화 환자에서 간섬유화 개선에 미치는 효과'},
+  pico:{p:'Patients with MASH and liver fibrosis',i:'GLP-1 based therapies (semaglutide, liraglutide)',c:'Placebo, standard care',o:'Improvement in liver fibrosis, resolution of MASH'},
+  condTerms:['MASH','hepatic fibrosis','steatohepatitis','NAFLD'],
+  txTerms:['GLP-1 receptor agonist','semaglutide','liraglutide'],
+  yrFrom:2015,yrTo:2026,maxP:100,clinOnly:false,
+  criteria:[
+    {id:'c1',text:'GLP-1 기반 치료',on:true},{id:'c2',text:'MASH/간섬유화 환자',on:true},
+    {id:'c3',text:'RCT 설계',on:true},{id:'c4',text:'위약/표준치료 비교',on:true},
+    {id:'c5',text:'섬유화 아웃컴',on:true},{id:'c6',text:'영문 논문',on:true}
+  ],
+  fields:[
+    {id:'patients',lb:'환자 수',on:true},{id:'intervention',lb:'중재법',on:true},
+    {id:'endpoint',lb:'Primary EP',on:true},{id:'duration',lb:'기간',on:true},
+    {id:'phase',lb:'Phase',on:true},{id:'findings',lb:'Findings',on:true},
+    {id:'pvalue',lb:'P-value',on:true},{id:'sponsor',lb:'Sponsor',on:false}
+  ],
+  scoreMin:67,dirty:{}
+};
+const P=[
+  {id:1,a:'Newsome 2021',s:{c1:1,c2:1,c3:1,c4:1,c5:1,c6:1},d:{patients:320,intervention:'Semaglutide 0.4mg',endpoint:'MASH resolution',duration:'72주',phase:'Ph2',findings:'해소 59% vs 17%',pvalue:'p<0.001',sponsor:'Novo Nordisk'},ev:'<span class="hl">Semaglutide 0.4mg: MASH resolution 59% vs 17% placebo (p&lt;0.001)</span>'},
+  {id:2,a:'Harrison 2020',s:{c1:1,c2:1,c3:1,c4:1,c5:1,c6:1},d:{patients:71,intervention:'Semaglutide 0.1-0.4mg',endpoint:'섬유화 개선',duration:'72주',phase:'Ph2',findings:'≥1단계 43%',pvalue:'p=0.005',sponsor:'Novo Nordisk'},ev:'<span class="hl">Fibrosis improvement ≥1 stage in 43%</span>'},
+  {id:3,a:'Loomba 2023',s:{c1:1,c2:1,c3:1,c4:.5,c5:1,c6:1},d:{patients:1200,intervention:'Semaglutide 2.4mg',endpoint:'MASH+섬유화',duration:'72주',phase:'Ph3',findings:'해소+무악화 37%',pvalue:'p<0.001',sponsor:'Novo Nordisk'},ev:'<span class="hl">ESSENCE: resolution without worsening fibrosis 37%</span>'},
+  {id:4,a:'Sanyal 2022',s:{c1:1,c2:1,c3:0,c4:1,c5:1,c6:1},d:{patients:196,intervention:'Semaglutide 2.4mg',endpoint:'간섬유화',duration:'48주',phase:'Ph2b',findings:'NAS 감소',pvalue:'p=0.002',sponsor:'Novo Nordisk'},ev:'<span class="hl">NAS score reduction (p=0.002)</span>'},
+  {id:5,a:'Armstrong 2019',s:{c1:1,c2:1,c3:1,c4:1,c5:.5,c6:1},d:{patients:52,intervention:'Liraglutide 1.8mg',endpoint:'NASH 해소',duration:'48주',phase:'Ph2',findings:'39% vs 9%',pvalue:'p=0.019',sponsor:'Novo Nordisk'},ev:'LEAN: <span class="hl">Liraglutide NASH resolution 39% vs 9% (p=0.019)</span>'},
+  {id:6,a:'Kuchay 2021',s:{c1:1,c2:.5,c3:1,c4:1,c5:1,c6:1},d:{patients:44,intervention:'Dulaglutide 1.5mg',endpoint:'간지방',duration:'24주',phase:'Ph4',findings:'-3.5% MRI',pvalue:'p=0.025',sponsor:'Eli Lilly'},ev:'<span class="hl">Liver fat -3.5% on MRI-PDFF (p=0.025)</span>'},
+  {id:7,a:'Flint 2021',s:{c1:1,c2:1,c3:1,c4:1,c5:1,c6:1},d:{patients:67,intervention:'Semaglutide 0.4mg',endpoint:'간지방',duration:'72주',phase:'Ph2',findings:'-5.2%',pvalue:'p<0.001',sponsor:'Novo Nordisk'},ev:'<span class="hl">-5.2% liver fat reduction</span>'},
+  {id:8,a:'Zhang 2023',s:{c1:1,c2:0,c3:0,c4:1,c5:1,c6:1},d:{patients:15,intervention:'Exenatide',endpoint:'ALT',duration:'12주',phase:'-',findings:'ALT↓',pvalue:'p=0.04',sponsor:'-'},ev:'Small case series.'},
+  {id:9,a:'Mori 2020',s:{c1:1,c2:1,c3:0,c4:0,c5:1,c6:1},d:{patients:30,intervention:'Liraglutide 0.9mg',endpoint:'FIB-4',duration:'24주',phase:'-',findings:'FIB-4↓',pvalue:'p=0.08',sponsor:'-'},ev:'Retrospective, 30 pts.'}
+];
+function calcS(p){const ac=S.criteria.filter(c=>c.on);if(!ac.length)return 100;let s=0;ac.forEach(c=>{s+=(p.s[c.id]||0);});return Math.round(s/ac.length*100);}
+function passed(){return P.filter(p=>calcS(p)>=S.scoreMin);}
+
+function setMode(m){
+  const sl=document.getElementById('msl'),bf=document.getElementById('bFree'),bg=document.getElementById('bGuid');
+  const fm=document.getElementById('freeM'),gm=document.getElementById('guidM');
+  if(m==='free'){sl.className='msl free';bf.classList.add('on');bg.classList.remove('on');fm.classList.remove('hide');gm.classList.add('hide');}
+  else{sl.className='msl guided';bg.classList.add('on');bf.classList.remove('on');gm.classList.remove('hide');fm.classList.add('hide');loadG(curG);}
+}
+function swGr(t){
+  ['res','mx','chat'].forEach(x=>{document.getElementById('grt_'+x).classList.remove('on');document.getElementById({res:'grRes',mx:'grMx',chat:'grChat'}[x]).classList.remove('on');});
+  document.getElementById('grt_'+t).classList.add('on');document.getElementById({res:'grRes',mx:'grMx',chat:'grChat'}[t]).classList.add('on');
+  if(t==='mx')renderMx2();if(t==='res')renderGrRes();}
+
+function renderGrRes(){
+  const ps=passed();const af=S.fields.filter(f=>f.on);
+  const total=P.length;const passN=ps.length;
+  const pct=total>0?Math.round(passN/total*100):0;
+  const dpN=passN*af.length;
+
+  /* 링 차트 SVG */
+  var sz=120,r=sz/2-8,cx=sz/2,cy=sz/2;
+  var circ=2*Math.PI*r;
+  var dash=circ*pct/100,gap=circ-dash;
+  var ringColor=pct>=70?'#34C759':pct>=40?'#FF9500':'#FF3B30';
+  var ring='<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 '+sz+' '+sz+'">'
+    +'<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="#F0F0F0" stroke-width="7"/>'
+    +'<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+ringColor+'" stroke-width="7" stroke-linecap="round"'
+    +' stroke-dasharray="'+dash.toFixed(1)+' '+gap.toFixed(1)+'" transform="rotate(-90 '+cx+' '+cy+')"/>'
+    +'</svg>';
+
+  var h='';
+
+  /* 히어로 카드 */
+  h+='<div style="background:#fff;border-radius:14px;padding:22px 24px 18px;margin-bottom:14px;border:1px solid #F0F0F0;">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">';
+  h+='<div><div style="font-size:17px;font-weight:700;color:#1C1C1E;letter-spacing:-.2px;">Systematic Review Results</div>';
+  h+='<div style="font-size:11px;color:#8E8E93;margin-top:1px;">문헌 스크리닝 현황 · '+S.proj.name+'</div></div>';
+
+  var statusColor=pct>=70?'#34C759':pct>=40?'#FF9500':'#FF3B30';
+  var statusBg=pct>=70?'#F0FFF4':pct>=40?'#FFF8F0':'#FFF0F0';
+  var statusBd=pct>=70?'#C8E6C9':pct>=40?'#FFE0B2':'#FFCDD2';
+  var statusTx=pct>=70?'GOOD':pct>=40?'MODERATE':'LOW';
+  h+='<div style="display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;background:'+statusBg+';border:1px solid '+statusBd+';color:'+statusColor+';font-size:12px;font-weight:700;letter-spacing:.3px;">';
+  h+='<span style="width:7px;height:7px;border-radius:50%;background:'+statusColor+';"></span>'+statusTx+'</div></div>';
+
+  /* 본문: 링 + 메트릭 */
+  h+='<div style="display:flex;align-items:center;gap:24px;">';
+  h+='<div style="flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center;">';
+  h+=ring;
+  h+='<div style="position:absolute;text-align:center;"><div style="font-size:32px;font-weight:800;color:'+ringColor+';letter-spacing:-1px;line-height:1;">'+pct+'%</div>';
+  h+='<div style="font-size:10px;color:#8E8E93;font-weight:500;margin-top:2px;">스크리닝 통과</div></div></div>';
+
+  h+='<div style="flex:1;display:flex;flex-direction:column;gap:10px;">';
+  h+='<div style="display:flex;align-items:baseline;gap:8px;padding:8px 0;border-bottom:1px solid #F5F5F5;">';
+  h+='<div style="font-size:22px;font-weight:800;color:#1C1C1E;min-width:58px;letter-spacing:-.5px;">'+total+'</div>';
+  h+='<div><div style="font-size:12px;font-weight:600;color:#1C1C1E;">검색 논문</div><div style="font-size:10px;color:#8E8E93;margin-top:1px;">PubMed 검색 결과</div></div></div>';
+  h+='<div style="display:flex;align-items:baseline;gap:8px;padding:8px 0;border-bottom:1px solid #F5F5F5;">';
+  h+='<div style="font-size:22px;font-weight:800;color:#1C1C1E;min-width:58px;letter-spacing:-.5px;">'+af.length+'</div>';
+  h+='<div><div style="font-size:12px;font-weight:600;color:#1C1C1E;">추출 필드</div><div style="font-size:10px;color:#8E8E93;margin-top:1px;">데이터 추출 항목</div></div></div>';
+  h+='<div style="display:flex;align-items:baseline;gap:8px;padding:8px 0;">';
+  h+='<div style="font-size:22px;font-weight:800;color:#1C1C1E;min-width:58px;letter-spacing:-.5px;">'+dpN+'</div>';
+  h+='<div><div style="font-size:12px;font-weight:600;color:#1C1C1E;">데이터포인트</div><div style="font-size:10px;color:#8E8E93;margin-top:1px;">'+passN+'편 × '+af.length+'필드</div></div></div>';
+  h+='</div></div>';
+
+  /* 신뢰도 바 — 스크리닝 기준 충족률 */
+  var confPct=Math.min(pct+10,100);
+  var confColor=confPct>=80?'#34C759':'#FF9500';
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid #F0F0F0;">';
+  h+='<span style="font-size:11px;color:#8E8E93;font-weight:500;">기준 충족</span>';
+  h+='<div style="flex:1;height:4px;border-radius:2px;background:#F0F0F0;"><div style="height:4px;border-radius:2px;background:linear-gradient(90deg,'+confColor+','+confColor+');width:'+confPct+'%;"></div></div>';
+  h+='<span style="font-size:13px;font-weight:700;color:'+confColor+';">'+confPct+'%</span></div>';
+  h+='</div>';
+
+  /* 통과 논문 카드 리스트 */
+  if(ps.length>0){
+    h+='<div style="font-size:11px;font-weight:800;color:#48484A;text-transform:uppercase;letter-spacing:.6px;margin:14px 0 8px;display:flex;align-items:center;gap:5px;">통과 논문<span style="flex:1;height:1px;background:#EFEFEF;"></span></div>';
+    ps.slice(0,4).forEach(function(p){
+      h+='<div style="background:#FAFAFA;border:1px solid #F0F0F0;border-radius:10px;padding:10px 12px;margin-bottom:6px;font-size:11px;display:flex;align-items:center;gap:8px;">';
+      h+='<div style="width:22px;height:22px;border-radius:6px;background:#F0FFF4;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#34C759;flex-shrink:0;">✓</div>';
+      h+='<div style="flex:1;"><span style="font-weight:600;color:#1C1C1E;">'+p.a+'</span><br><span style="font-size:10px;color:#8E8E93;">'+p.d.patients+'명 · '+p.d.pvalue+'</span></div>';
+      h+='<span class="ev" style="margin-left:auto;font-size:10px;" onclick="showEv('+p.id+')">↗</span>';
+      h+='</div>';
+    });
+  }
+
+  /* 재실행 / 완료 상태 */
+  if(Object.keys(S.dirty).length){
+    h+='<div style="background:#FFF8F0;border:1px solid #FFE0B2;border-radius:10px;padding:8px 12px;margin-top:8px;font-size:11px;color:#E65100;display:flex;align-items:center;gap:6px;">↻ '+Object.keys(S.dirty).length+'개 단계 재실행 필요</div>';
+  }else{
+    h+='<div style="background:#F0FFF4;border:1px solid #C8E6C9;border-radius:10px;padding:8px 12px;margin-top:8px;font-size:11px;color:#2E7D32;display:flex;align-items:center;gap:6px;">✓ 모든 단계 최신</div>';
+  }
+
+  document.getElementById('grResCnt').innerHTML=h;
+}
+
+let curG=1;let GN=['프로젝트','PICO','키워드','스크리닝','추출','내보내기'];
+function loadG(n){curG=n;document.getElementById('gLb').textContent='Step '+n+'/6';document.getElementById('gP').disabled=n===1;
+  const nb=document.getElementById('gN');nb.textContent=n===6?'✓ 완료':'다음 →';nb.className=n===6?'btn suc':'btn pri';
+  renderGProg();renderGW(n);renderGrRes();}
+function gNext(){if(curG<6)loadG(curG+1);}
+function gPrev(){if(curG>1)loadG(curG-1);}
+
+function renderGProg(){
+  let h='';for(let i=1;i<=6;i++){
+    if(i>1)h+=`<div class="gline ${S.dirty[i]?'dirty':''}"></div>`;
+    let c=i<curG?'done':i===curG?'cur':'';if(S.dirty[i])c='dirty';
+    const tx=S.dirty[i]?'↻':i<curG&&!S.dirty[i]?'✓':i;
+    h+=`<div class="gpi ${c}" onclick="loadG(${i})"><div class="gpd ${c}">${tx}</div><div class="gpl">${GN[i-1]}</div></div>`;
+  }document.getElementById('gProg').innerHTML=h;}
+
+function markDirty(from){for(let i=from;i<=5;i++)S.dirty[i]=true;renderGProg();miniMsg('↻ Step '+from+'~5 재실행 필요');}
+function rerun(step){delete S.dirty[step];for(let i=step+1;i<=5;i++){if(S.dirty[i])delete S.dirty[i];else break;}renderGProg();miniMsg('✓ Step '+step+' 재실행 완료');loadG(curG);renderMx2();}
+function miniMsg(txt){const c=document.getElementById('miniMsgs');const d=document.createElement('div');d.className='m ai';d.innerHTML=`<div class="bb" style="font-size:11px;"><div class="nm" style="font-size:9px;">R0</div>${txt}</div>`;c.appendChild(d);c.scrollTop=c.scrollHeight;}
+
+function dirtyBnr(n){return S.dirty[n]?`<div class="dirty-banner">↻ 재실행 필요 <button class="btn wrn" style="padding:2px 10px;font-size:9px;" onclick="rerun(${n})">↻ 재실행</button></div>`:'';}
+
+function renderGW(n){
+  const el=document.getElementById('gCnt');
+  const L=I18N[curLang];
+  if(n===1){el.innerHTML=dirtyBnr(1)+`<div style="font-size:13px;font-weight:700;color:var(--bold);margin-bottom:2px;">${L.projDef}</div><div style="font-size:10px;color:var(--gray);margin-bottom:10px;">${L.projDefSub}</div>
+    <div class="fl"><label class="flb">${curLang==='ko'?'프로젝트명':'Project Name'}</label><input class="fin" value="${S.proj.name}" oninput="S.proj.name=this.value;markDirty(2)"></div>
+    <div class="fl"><label class="flb">${curLang==='ko'?'설명':'Description'}</label><textarea class="fta" oninput="S.proj.desc=this.value;markDirty(2)">${S.proj.desc}</textarea></div>`;}
+  else if(n===2){el.innerHTML=dirtyBnr(2)+`<div style="font-size:13px;font-weight:700;color:var(--bold);margin-bottom:2px;">${L.picoFilter}</div><div style="font-size:10px;color:var(--gray);margin-bottom:10px;">${L.picoSub}</div>
+    ${['p','i','c','o'].map(k=>{const bg={p:'var(--blue-bg)',i:'var(--green-bg)',c:'var(--amber-bg)',o:'var(--sf)'}[k];
+      return `<div class="pico"><span class="pltr" style="background:${bg};">${k.toUpperCase()}</span><span style="font-size:10px;font-weight:600;color:var(--bold);">${({p:'Population',i:'Intervention',c:'Comparator',o:'Outcome'})[k]}</span><textarea class="fta" style="min-height:28px;margin-top:2px;" oninput="S.pico.${k}=this.value;markDirty(3)">${S.pico[k]}</textarea></div>`;}).join('')}`;}
+  else if(n===3){el.innerHTML=dirtyBnr(3)+`<div style="font-size:13px;font-weight:700;color:var(--bold);margin-bottom:2px;">${L.keywords}</div><div style="font-size:10px;color:var(--gray);margin-bottom:10px;">${L.keywordsSub}</div>
+    <div class="fl"><label class="flb">Condition</label><div class="tags" id="gct"></div></div>
+    <div class="fl"><label class="flb">Treatment</label><div class="tags" id="gtt"></div></div>
+    <div style="display:flex;gap:6px;"><div class="fl" style="flex:1;"><label class="flb">${curLang==='ko'?'연도':'Year'}</label><div style="display:flex;gap:3px;"><input class="fin" value="${S.yrFrom}" style="width:55px;" onchange="S.yrFrom=+this.value;markDirty(4)"><span style="line-height:28px;font-size:10px;color:var(--gray);">~</span><input class="fin" value="${S.yrTo}" style="width:55px;" onchange="S.yrTo=+this.value;markDirty(4)"></div></div>
+    <div class="fl" style="flex:1;"><label class="flb">${curLang==='ko'?'최대':'Max'}</label><input class="fin" type="number" value="${S.maxP}" onchange="S.maxP=+this.value;markDirty(4)"></div></div>`;
+    renderGTags('gct','condTerms');renderGTags('gtt','txTerms');}
+  else if(n===4){const ps=passed().length;
+    el.innerHTML=dirtyBnr(4)+`<div style="font-size:13px;font-weight:700;color:var(--bold);margin-bottom:2px;">${L.screening}</div><div style="font-size:10px;color:var(--gray);margin-bottom:10px;">${L.screeningSub}</div>
+    ${S.criteria.map((c,i)=>`<div class="cri ${c.on?'':'off'}"><input type="checkbox" ${c.on?'checked':''} onchange="S.criteria[${i}].on=this.checked;renderMx2();renderGrRes();loadG(4)"> <span style="flex:1;">${c.text}</span><span style="color:var(--gray);cursor:pointer;font-size:11px;" onclick="S.criteria.splice(${i},1);renderMx2();renderGrRes();loadG(4)">×</span></div>`).join('')}
+    <div class="cri" style="border-style:dashed;justify-content:center;color:var(--gray);cursor:pointer;font-size:10px;" onclick="addCri()">${L.addCriteria}</div>
+    <div style="margin-top:6px;background:var(--green-bg2);border:1px solid var(--bd);border-radius:var(--r);padding:6px 8px;font-size:10px;">✓ ${P.length}${curLang==='ko'?'편 중':'articles,'} <span style="font-weight:700;color:var(--bold);">${ps}${curLang==='ko'?'편':''}</span> ${curLang==='ko'?'통과':'passed'} (≥${S.scoreMin})</div>`;}
+  else if(n===5){const ps=passed();const af=S.fields.filter(f=>f.on);
+    const fTags=S.fields.map((f,i)=>`<span class="tag ${f.on?'on':''}" onclick="S.fields[${i}].on=!S.fields[${i}].on;renderGrRes();loadG(5)">${f.lb}${f.on?' <span class=x>×</span>':''}</span>`).join('');
+    el.innerHTML=dirtyBnr(5)+`<div style="font-size:13px;font-weight:700;color:var(--bold);margin-bottom:2px;">${L.extraction}</div><div style="font-size:10px;color:var(--gray);margin-bottom:10px;">${L.extractionSub}</div>
+    <div class="fl"><label class="flb">${curLang==='ko'?'추출 필드':'Extract Fields'}</label><div class="tags">${fTags}</div></div>
+    <div style="overflow-x:auto;margin-top:4px;"><table class="ex"><thead><tr><th>${curLang==='ko'?'논문':'Paper'}</th>${af.map(f=>'<th>'+f.lb+'</th>').join('')}<th>${curLang==='ko'?'근거':'Evidence'}</th></tr></thead><tbody>
+    ${ps.slice(0,6).map(p=>'<tr><td style="font-size:9px;font-weight:600;color:var(--bold);">'+p.a+'</td>'+af.map(f=>'<td>'+(p.d[f.id]!=null?p.d[f.id]:'-')+'</td>').join('')+'<td><span class="ev" onclick="showEv('+p.id+')">↗</span></td></tr>').join('')}
+    </tbody></table></div>`;}
+  else if(n===6){const ps=passed().length;const af=S.fields.filter(f=>f.on).length;
+    el.innerHTML=`<div style="font-size:13px;font-weight:700;color:var(--bold);margin-bottom:2px;">${L.exportTitle}</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+      <button class="btn pri" style="width:100%;padding:8px;">Excel (${ps}${curLang==='ko'?'편':''} × ${af}${curLang==='ko'?'필드':'fields'})</button>
+      <button class="btn" style="width:100%;padding:8px;">JSON</button>
+      <button class="btn" style="width:100%;padding:8px;">${curLang==='ko'?'인용 복사':'Copy Citation'}</button>
+      <button class="btn suc" style="width:100%;padding:8px;">PRISMA ${curLang==='ko'?'리포트':'Report'}</button>
+    </div>`;}
+}
+function renderGTags(cid,key){const el=document.getElementById(cid);if(!el)return;
+  el.innerHTML=S[key].map((t,i)=>`<span class="tag on">${t} <span class="x" onclick="event.stopPropagation();S.${key}.splice(${i},1);markDirty(4);loadG(3)">×</span></span>`).join('')+`<span class="tag add" onclick="addGT('${key}')">+</span>`;}
+function addGT(k){const v=prompt('키워드:');if(v){S[k].push(v);markDirty(4);loadG(3);}}
+function addCri(){const v=prompt('기준:');if(v){S.criteria.push({id:'c'+(S.criteria.length+1),text:v,on:true});renderMx2();renderGrRes();loadG(4);}}
+
+function renderMx2(){const el=document.getElementById('mxTbl2');if(!el)return;
+  const ac=S.criteria.filter(c=>c.on);
+  let h='<table class="mx"><thead><tr><th>논문</th>'+ac.map(c=>'<th style="max-width:55px;">'+c.text.slice(0,5)+'…</th>').join('')+'<th>점수</th></tr></thead><tbody>';
+  P.forEach(p=>{const sc=calcS(p);const f=sc<S.scoreMin;
+    h+=`<tr class="${f?'filt':''}"><td style="font-size:9px;font-weight:600;color:var(--bold);">${p.a}</td>`;
+    ac.forEach(c=>{const v=p.s[c.id];h+=`<td class="${v===1?'cp':v===0?'cf':'cm'}">${v===1?'✓':v===0?'✗':'△'}</td>`;});
+    h+=`<td style="font-weight:700;color:var(--bold);">${sc}</td></tr>`;});
+  h+='</tbody></table>';el.innerHTML=h;}
+
+function showEv(id){const p=P.find(x=>x.id===id);if(!p)return;
+  document.getElementById('evCnt').innerHTML=`<div style="font-size:14px;font-weight:700;color:var(--bold);margin-bottom:5px;">${p.a} — 근거</div><div style="font-size:11px;line-height:1.6;color:var(--base);border:1px solid var(--bd);border-radius:var(--r);padding:10px;">${p.ev}</div>`;
+  document.getElementById('evPop').classList.add('show');document.getElementById('ovl').classList.add('show');}
+function closeEv(){document.getElementById('evPop').classList.remove('show');document.getElementById('ovl').classList.remove('show');}
+
+/* ===== [v22] P3-6: i18n 다국어 시스템 ===== */
+var curLang='ko';
+var I18N={
+  ko:{
+    emptyTitle:'질문을 입력하면 분석을 시작합니다',
+    emptySub:'아래 입력창에 질문을 입력하고 전송하세요',
+    waitExec:'실행 대기 중',
+    waitResult:'실행 완료 후 결과가 표시됩니다',
+    standby:'대기 중',
+    confidence:'신뢰도:',
+    prev:'이전',next:'다음',
+    autoRun:'자동 실행',autoStop:'중지',
+    results:'결과',
+    running:'실행 중...',done:'완료',wait:'대기',
+    autoStart:'Guided 자동 실행을 시작합니다.',
+    autoStepDone:'Step {n} 완료',
+    autoAllDone:'✓ 전체 6단계 자동 실행 완료',
+    placeholder:'자유 질의...',
+    placeholderRunning:'분석 진행 중...',
+    placeholderDone:'추가 질문...',
+    miniPlaceholder:'워크플로 관련 질문...',
+    projDef:'프로젝트 정의',projDefSub:'수정 → PICO 이하 전체 재계산',
+    picoFilter:'PICO 필터',picoSub:'수정 → 키워드~추출 재실행',
+    keywords:'키워드 + 검색',keywordsSub:'태그 변경 → 스크리닝 재실행',
+    screening:'AI 스크리닝',screeningSub:'기준 토글 → 매트릭스 즉시 반영',
+    extraction:'데이터 추출',extractionSub:'필드 토글 → 테이블 즉시 반영',
+    exportTitle:'내보내기',
+    scoreFilter:'점수 필터:',
+    addCriteria:'+ 기준 추가'
+  },
+  en:{
+    emptyTitle:'Enter a question to start analysis',
+    emptySub:'Type your question below and press send',
+    waitExec:'Awaiting execution',
+    waitResult:'Results will appear after execution',
+    standby:'Standby',
+    confidence:'Confidence:',
+    prev:'Prev',next:'Next',
+    autoRun:'Auto Run',autoStop:'Stop',
+    results:'Results',
+    running:'Running...',done:'Done',wait:'Waiting',
+    autoStart:'Starting Guided auto-execution.',
+    autoStepDone:'Step {n} complete',
+    autoAllDone:'✓ All 6 steps completed automatically',
+    placeholder:'Free query...',
+    placeholderRunning:'Analysis in progress...',
+    placeholderDone:'Follow-up question...',
+    miniPlaceholder:'Workflow questions...',
+    projDef:'Project Definition',projDefSub:'Edit → Recalculate PICO and below',
+    picoFilter:'PICO Filter',picoSub:'Edit → Re-run keyword~extraction',
+    keywords:'Keywords + Search',keywordsSub:'Tag change → Re-run screening',
+    screening:'AI Screening',screeningSub:'Toggle criteria → Matrix updates',
+    extraction:'Data Extraction',extractionSub:'Toggle fields → Table updates',
+    exportTitle:'Export',
+    scoreFilter:'Score filter:',
+    addCriteria:'+ Add criteria'
+  }
+};
+
+function setLang(lang){
+  curLang=lang;
+  document.getElementById('lKo').classList.toggle('on',lang==='ko');
+  document.getElementById('lEn').classList.toggle('on',lang==='en');
+  // i18n 텍스트 적용
+  document.querySelectorAll('.i18n').forEach(function(el){
+    var key=el.getAttribute('data-key');
+    if(key&&I18N[lang][key])el.textContent=I18N[lang][key];
+  });
+  // placeholder 적용
+  var ci=document.getElementById('chatInput');
+  if(ci&&!isRunning&&!executionDone)ci.setAttribute('placeholder',I18N[lang].placeholder);
+  var mi=document.querySelector('.miniInp');
+  if(mi)mi.setAttribute('placeholder',I18N[lang].miniPlaceholder);
+  // Guided step names
+  GN_i18n();
+  if(curG)loadG(curG);
+}
+
+var GN_ko=['프로젝트','PICO','키워드','스크리닝','추출','내보내기'];
+var GN_en=['Project','PICO','Keywords','Screening','Extract','Export'];
+function GN_i18n(){for(var i=0;i<6;i++)GN[i]=(curLang==='en'?GN_en:GN_ko)[i];}
+
+/* ===== [v22] P3-2: Guided 모드 자동 실행 ===== */
+/* [v23] 세그먼트 진행바 + try-catch로 멈춤 방지 */
+var gAutoRunning=false;
+var gAutoTimer=null;
+
+function updateAutoSeg(step,total){
+  for(var i=1;i<=6;i++){
+    var seg=document.getElementById('gSeg'+i);
+    if(!seg)continue;
+    seg.className='seg'+(i<step?' done':i===step?' cur':'');
+  }
+  var lbl=document.getElementById('gSegLbl');
+  if(lbl)lbl.textContent=(step>total?total:step)+'/'+total;
+}
+
+function guidedAutoRun(){
+  if(gAutoRunning){
+    gAutoRunning=false;
+    clearTimeout(gAutoTimer);
+    var btn=document.getElementById('gAutoBtn');
+    btn.innerHTML='<svg width="10" height="10" fill="currentColor" viewBox="0 0 24 24" style="vertical-align:middle;"><polygon points="5,3 19,12 5,21"/></svg> <span class="i18n" data-key="autoRun">'+I18N[curLang].autoRun+'</span>';
+    btn.className='btn suc';
+    document.getElementById('gAutoSeg').style.display='none';
+    miniMsg('⏹ '+(curLang==='ko'?'자동 실행 중지':'Auto-run stopped'));
+    return;
+  }
+
+  gAutoRunning=true;
+  var btn=document.getElementById('gAutoBtn');
+  btn.innerHTML='⏹ <span class="i18n" data-key="autoStop">'+I18N[curLang].autoStop+'</span>';
+  btn.className='btn wrn';
+  document.getElementById('gAutoSeg').style.display='flex';
+  updateAutoSeg(0,6);
+
+  try{loadG(1);}catch(e){}
+  miniMsg(I18N[curLang].autoStart);
+  guidedAutoStep(1);
+}
+
+function guidedAutoStep(n){
+  if(!gAutoRunning||n>6){
+    if(n>6){
+      miniMsg(I18N[curLang].autoAllDone);
+      gAutoRunning=false;
+      var btn=document.getElementById('gAutoBtn');
+      btn.innerHTML='<svg width="10" height="10" fill="currentColor" viewBox="0 0 24 24" style="vertical-align:middle;"><polygon points="5,3 19,12 5,21"/></svg> <span class="i18n" data-key="autoRun">'+I18N[curLang].autoRun+'</span>';
+      btn.className='btn suc';
+      updateAutoSeg(7,6);
+    }
+    return;
+  }
+
+  try{loadG(n);}catch(e){/* skip render error */}
+  updateAutoSeg(n,6);
+
+  gAutoTimer=setTimeout(function(){
+    if(S.dirty[n]){try{rerun(n);}catch(e){}}
+    miniMsg(I18N[curLang].autoStepDone.replace('{n}',n));
+    guidedAutoStep(n+1);
+  },1500);
+}
+
+/* [v22] 초기화 — I18N 정의 후 실행 */
+setMode('free');loadG(1);renderMx2();drawGraph();
+
+/* [v6] 사이드패널 토글 */
+var curSide=null;
+function toggleSide(type){
+  var panel=document.getElementById('sidePanel');
+  var title=document.getElementById('panelTitle');
+  var body=document.getElementById('panelBody');
+  if(curSide===type||!type){
+    panel.classList.remove('open');curSide=null;return;
+  }
+  curSide=type;panel.classList.add('open');
+  if(type==='projects'){
+    title.textContent='프로젝트';
+    body.innerHTML=
+      '<div class="proj-item active"><span class="proj-icon" style="color:var(--green)">●</span><span class="proj-name">BRCA1 위험도 분석</span><span class="proj-date">오늘</span></div>'+
+      '<div class="proj-item"><span class="proj-icon" style="color:var(--blue)">●</span><span class="proj-name">GLP-1 MASH 치료</span><span class="proj-date">2/24</span></div>'+
+      '<div class="proj-item"><span class="proj-icon" style="color:var(--amber)">●</span><span class="proj-name">CRISPR 스크리닝</span><span class="proj-date">2/22</span></div>'+
+      '<div class="proj-item"><span class="proj-icon" style="color:var(--rose)">●</span><span class="proj-name">PD-L1 메타분석</span><span class="proj-date">2/20</span></div>'+
+      '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd);"><div class="proj-item" style="color:var(--blue);"><span class="proj-icon">+</span><span class="proj-name">새 프로젝트</span></div></div>';
+  }else if(type==='history'){
+    title.textContent='대화 기록';
+    body.innerHTML=
+      '<div style="font-size:9px;color:var(--gray);padding:4px 0 6px;font-weight:600;">오늘</div>'+
+      '<div class="hist-item current">BRCA1 변이 유방암 위험도 분석</div>'+
+      '<div class="hist-item">GLP-1 MASH 문헌검토 수정</div>'+
+      '<div style="font-size:9px;color:var(--gray);padding:8px 0 6px;font-weight:600;">어제</div>'+
+      '<div class="hist-item">GWAS Catalog 변이 우선순위</div>'+
+      '<div class="hist-item">PubMed 검색 전략 최적화</div>'+
+      '<div class="hist-item">ClinVar pathogenicity 필터링</div>'+
+      '<div style="font-size:9px;color:var(--gray);padding:8px 0 6px;font-weight:600;">이번 주</div>'+
+      '<div class="hist-item">SLR 프로토콜 설계</div>'+
+      '<div class="hist-item">면역항암 체크포인트 분석</div>';
+  }
+}
+
+/* [v6] Free 우측 4탭 전환 */
+function swFrTab(t){
+  var map={steps:'frSteps',code:'frCode',results:'frResults',graph:'frGraph'};
+  Object.values(map).forEach(function(id){var el=document.getElementById(id);if(el)el.classList.remove('on');});
+  document.querySelectorAll('.frTab').forEach(function(b){b.classList.remove('on');});
+  var target=document.getElementById(map[t]);
+  if(target){target.classList.add('on');target.scrollTop=0;}
+  if(event&&event.target)event.target.classList.add('on');
+}
+
+/* ===== [v21] P3-1: Visual Graph ===== */
+/* [v24] 풍성한 DAG — 중간 데이터 노드 포함 */
+var graphStates=[0,0,0,0];
+
+function drawGraph(){
+  var svg=document.getElementById('graphSvg');
+  if(!svg)return;
+  svg.setAttribute('viewBox','0 0 520 310');
+
+  var toolNodes=[
+    {id:'t0',x:120,y:65,label:'ClinVar',sub:'변이 조회',cls:'clinvar',idx:0},
+    {id:'t1',x:120,y:185,label:'GWAS',sub:'위험도 검색',cls:'gwas',idx:1},
+    {id:'t2',x:290,y:125,label:'PubMed',sub:'문헌 수집',cls:'pubmed',idx:2},
+    {id:'t3',x:440,y:125,label:'Analyze',sub:'종합 보고',cls:'analyze',idx:3}
+  ];
+  var dataNodes=[
+    {id:'d0',x:195,y:40,label:'346 변이'},
+    {id:'d1',x:195,y:75,label:'89 LP/P'},
+    {id:'d2',x:195,y:170,label:'OR 5.2'},
+    {id:'d3',x:195,y:205,label:'P=2.3e-15'},
+    {id:'d4',x:370,y:90,label:'42편 논문'},
+    {id:'d5',x:370,y:155,label:'메타 4편'},
+    {id:'d6',x:440,y:235,label:'위험도 보고서'},
+    {id:'d7',x:245,y:95,label:'유전자 매핑'},
+    {id:'d8',x:370,y:40,label:'CI 3.8-7.1'},
+    {id:'d9',x:370,y:200,label:'근거 등급 A'}
+  ];
+
+  var colMap={clinvar:'#5B93BA',gwas:'#5EA87D',pubmed:'#B8923E',analyze:'#86868B'};
+  var bgMap={clinvar:'#D5E6F2',gwas:'#CCE9D8',pubmed:'#F0DFBF',analyze:'#F5F5F7'};
+
+  var h='<defs>';
+  h+='<marker id="aG" markerWidth="5" markerHeight="4" refX="5" refY="2" orient="auto"><path d="M0 0 L5 2 L0 4" fill="#D5D5DA"/></marker>';
+  h+='<marker id="aGrun" markerWidth="5" markerHeight="4" refX="5" refY="2" orient="auto"><path d="M0 0 L5 2 L0 4" fill="#5B93BA"/></marker>';
+  h+='<marker id="aGdone" markerWidth="5" markerHeight="4" refX="5" refY="2" orient="auto"><path d="M0 0 L5 2 L0 4" fill="#5EA87D"/></marker>';
+  h+='<filter id="gSh"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.06"/></filter>';
+  h+='</defs>';
+
+  /* Data Lake */
+  h+='<g transform="translate(40,125)">';
+  h+='<rect x="-26" y="-20" width="52" height="40" rx="6" fill="#FFF7E6" stroke="#D4A843" stroke-width="1.2" stroke-dasharray="3 2"/>';
+  h+='<text x="0" y="-4" text-anchor="middle" font-size="11" fill="#D4A843">\u26C1</text>';
+  h+='<text x="0" y="10" text-anchor="middle" font-size="7" font-weight="600" fill="#86868B">Data Lake</text>';
+  h+='</g>';
+  h+='<path d="M66 112 Q90 90 88 80" fill="none" stroke="#D4A843" stroke-width="1" stroke-dasharray="3 2" opacity=".5"/>';
+  h+='<path d="M66 138 Q90 160 88 172" fill="none" stroke="#D4A843" stroke-width="1" stroke-dasharray="3 2" opacity=".5"/>';
+
+  /* Query */
+  h+='<g transform="translate(40,40)">';
+  h+='<rect x="-26" y="-12" width="52" height="24" rx="12" fill="#F5F5F7" stroke="#D5D5DA" stroke-width="1"/>';
+  h+='<text x="0" y="4" text-anchor="middle" font-size="8" fill="#86868B">BRCA1</text></g>';
+  h+='<path d="M66 40 L88 57" fill="none" stroke="#D5D5DA" stroke-width="1" stroke-dasharray="3 2" opacity=".5"/>';
+  h+='<path d="M66 45 Q80 110 88 175" fill="none" stroke="#D5D5DA" stroke-width="1" stroke-dasharray="3 2" opacity=".5"/>';
+
+  /* Edges — each edge tagged with toolGroup (which step activates it) */
+  var edges=[
+    /* Tool 0 (ClinVar) outputs */
+    [152,55,167,40,0, 0],[152,75,167,75,0, 0],
+    /* Tool 1 (GWAS) outputs */
+    [152,175,167,170,0, 1],[152,195,167,205,0, 1],
+    /* Tool 2 (PubMed) outputs */
+    [322,115,342,90,0, 2],[322,135,342,155,0, 2],
+    /* Tool 3 (Analyze) → 보고서 */
+    [440,150,440,220,0, 3],
+    /* Data processing (activated by upstream tool) */
+    [223,40,240,95,1, 0],[223,75,240,100,1, 0],
+    [223,170,262,120,1, 1],[223,205,262,135,1, 1],
+    [270,95,290,115,1, 2],
+    /* Cross-connections */
+    [223,40,342,40,1, 2],[223,205,342,200,1, 2],
+    /* Into Analyze */
+    [398,90,412,115,1, 3],[398,155,412,135,1, 3],
+    [398,40,430,115,1, 3],[398,200,430,135,1, 3]
+  ];
+  edges.forEach(function(e,i){
+    var cls='graph-edge gEdge'+e[5];
+    if(e[4]===1){
+      var mx=(e[0]+e[2])/2;
+      h+='<path class="'+cls+'" id="gE'+i+'" d="M'+e[0]+' '+e[1]+' Q'+mx+' '+e[1]+' '+e[2]+' '+e[3]+'" fill="none" marker-end="url(#aG)"/>';
+    }else{
+      h+='<path class="'+cls+'" id="gE'+i+'" d="M'+e[0]+' '+e[1]+' L'+e[2]+' '+e[3]+'" fill="none" marker-end="url(#aG)"/>';
+    }
+  });
+
+  /* Tool Nodes */
+  toolNodes.forEach(function(n){
+    var col=colMap[n.cls],bg=bgMap[n.cls];
+    h+='<g class="graph-node" onclick="graphNodeClick('+n.idx+')" transform="translate('+n.x+','+n.y+')" filter="url(#gSh)">';
+    h+='<rect x="-32" y="-22" width="64" height="44" rx="8" fill="'+bg+'" stroke="'+col+'" stroke-width="1.5" id="gNode'+n.idx+'"/>';
+    h+='<text x="0" y="-4" text-anchor="middle" font-size="10" font-weight="600" fill="#1D1D1F">'+n.label+'</text>';
+    h+='<text x="0" y="8" text-anchor="middle" font-size="7" fill="#86868B">'+n.sub+'</text>';
+    h+='<circle cx="22" cy="-14" r="5" fill="white" stroke="'+col+'" stroke-width="1" id="gDot'+n.idx+'"/>';
+    h+='<text x="22" y="-11" text-anchor="middle" font-size="6" font-weight="600" fill="'+col+'" id="gDotTxt'+n.idx+'">'+(n.idx+1)+'</text>';
+    h+='</g>';
+  });
+
+  /* Data Nodes */
+  dataNodes.forEach(function(d){
+    var isOut=d.id==='d6',isNew=d.id==='d7'||d.id==='d8'||d.id==='d9';
+    var fill=isOut?'#CCE9D8':isNew?'#F0F0FF':'#FFFFFF';
+    var stroke=isOut?'#5EA87D':isNew?'#9090C0':'#D5D5DA';
+    var fw=isOut?'600':'400';
+    /* [v24] 위험도 보고서 노드 클릭 → Results 탭 이동 */
+    var click=isOut?' class="graph-node" onclick="swFrTab(\'results\');document.querySelectorAll(\'.frTab\').forEach(function(b){b.classList.remove(\'on\');});document.querySelectorAll(\'.frTab\')[2].classList.add(\'on\');"':'';
+    h+='<g transform="translate('+d.x+','+d.y+')"'+click+'>';
+    h+='<rect x="-27" y="-9" width="54" height="18" rx="9" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+(isOut?'1.2':'0.8')+'"/>';
+    h+='<text x="0" y="3" text-anchor="middle" font-size="7" font-weight="'+fw+'" fill="#1D1D1F">'+d.label+'</text>';
+    h+='</g>';
+  });
+
+  /* Legend */
+  h+='<g transform="translate(8,280)">';
+  h+='<rect x="0" y="0" width="8" height="8" rx="2" fill="#D5E6F2" stroke="#5B93BA" stroke-width=".7"/><text x="11" y="7" font-size="6" fill="#86868B">Tool</text>';
+  h+='<rect x="34" y="1" width="12" height="6" rx="3" fill="#FFF" stroke="#D5D5DA" stroke-width=".7"/><text x="49" y="7" font-size="6" fill="#86868B">Data</text>';
+  h+='<rect x="70" y="1" width="12" height="6" rx="3" fill="#F0F0FF" stroke="#9090C0" stroke-width=".7"/><text x="85" y="7" font-size="6" fill="#86868B">처리</text>';
+  h+='<rect x="103" y="0" width="8" height="8" rx="2" fill="#FFF7E6" stroke="#D4A843" stroke-width=".7" stroke-dasharray="2 1"/><text x="114" y="7" font-size="6" fill="#86868B">Lake</text>';
+  h+='</g>';
+
+  svg.innerHTML=h;
+}
+
+
+function updateGraphNode(idx,state){
+  graphStates[idx]=state;
+  var dot=document.getElementById('gDot'+idx);
+  var txt=document.getElementById('gDotTxt'+idx);
+  var node=document.getElementById('gNode'+idx);
+  if(!dot)return;
+  var edgesForStep=document.querySelectorAll('.gEdge'+idx);
+  if(state===1){
+    dot.setAttribute('fill','#5B93BA');dot.setAttribute('stroke','#5B93BA');
+    if(txt){txt.textContent='⏳';txt.setAttribute('fill','#fff');}
+    if(node)node.setAttribute('stroke-width','2.5');
+    edgesForStep.forEach(function(e){e.classList.add('running');e.classList.remove('done');e.setAttribute('marker-end','url(#aGrun)');});
+  }else if(state===2){
+    dot.setAttribute('fill','#5EA87D');dot.setAttribute('stroke','#5EA87D');
+    if(txt){txt.textContent='✓';txt.setAttribute('fill','#fff');}
+    if(node)node.setAttribute('stroke-width','1.5');
+    edgesForStep.forEach(function(e){e.classList.remove('running');e.classList.add('done');e.setAttribute('marker-end','url(#aGdone)');});
+  }
+}
+
+function graphNodeClick(idx){
+  if(STEPS[idx]){
+    document.getElementById('codeView').innerHTML=highlightPy(STEPS[idx].code);
+    swFrTab('code');
+    document.querySelectorAll('.frTab').forEach(function(b){b.classList.remove('on');});
+    document.querySelectorAll('.frTab')[1].classList.add('on');
+    document.getElementById('frGraph').classList.remove('on');
+    document.getElementById('frCode').classList.add('on');
+  }
+}
+
+/* ===== [v21] P3-4: Failure Taxonomy ===== */
+var ftxItems=[];
+var ftxCounts={env:0,tool:0,config:0,reason:0};
+
+function addFailure(type,msg,autoRecover){
+  var id=ftxItems.length;
+  ftxItems.push({type:type,msg:msg,status:'recovering',id:id});
+  ftxCounts[type]++;
+  renderFtx();
+  document.getElementById('ftxPanel').classList.add('show');
+
+  if(autoRecover){
+    setTimeout(function(){
+      ftxItems[id].status='recovered';
+      renderFtx();
+    },2500);
+  }
+}
+
+function renderFtx(){
+  var body=document.getElementById('ftxBody');
+  var iconMap={env:'🔴',tool:'🟡',config:'🟣',reason:'🔵'};
+  var nameMap={env:'Environment',tool:'Tool',config:'Config',reason:'Reasoning'};
+  body.innerHTML=ftxItems.map(function(f){
+    return '<div class="ftx-item '+f.type+'"><span class="ftx-icon">'+iconMap[f.type]+'</span><div class="ftx-text"><div style="font-weight:600;margin-bottom:1px;">'+nameMap[f.type]+' Error</div>'+f.msg+'</div><span class="ftx-status '+f.status+'">'+(f.status==='recovered'?'✓ 복구':'↻ 복구중')+'</span></div>';
+  }).join('');
+  var cnt=document.getElementById('ftxCount');
+  cnt.innerHTML='<div class="fc"><span class="n">'+(ftxCounts.env+ftxCounts.tool+ftxCounts.config+ftxCounts.reason)+'</span>총</div><div class="fc"><span class="n" style="color:var(--green);">'+ftxItems.filter(function(f){return f.status==='recovered';}).length+'</span>복구</div><div class="fc"><span class="n" style="color:var(--amber);">'+ftxItems.filter(function(f){return f.status==='recovering';}).length+'</span>진행</div>';
+}
+
+/* ===== [v21] P3-5: Export 버튼 ===== */
+function exportResults(format){
+  var data={
+    query:'BRCA1 변이 유방암 위험도 분석',
+    steps:STEPS.map(function(s,i){return {step:i+1,title:s.t,summary:s.summary,tokens:s.tokens,tool:s.tool};}),
+    conclusion:{breast_cancer:'~70%',ovarian_cancer:'~45%',odds_ratio:'5.2',evidence_articles:42,pathogenic_variants:346,confidence:'94%'}
+  };
+  if(format==='json'){
+    var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='AIGEN_R0_analysis.json';a.click();
+  }else if(format==='clipboard'){
+    var text='BRCA1 분석 결과\n생애 유방암 위험도: ~70%\n난소암 위험도: ~45%\nOR: 5.2 (95% CI: 3.8-7.1)\n근거 문헌: 42편\n신뢰도: 94%';
+    navigator.clipboard.writeText(text).then(function(){showToast('클립보드에 복사되었습니다');});
+  }
+}
+
+function showToast(msg){
+  var t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:50px;left:50%;transform:translateX(-50%);background:var(--bold);color:#fff;padding:8px 18px;border-radius:var(--r);font-size:11px;z-index:200;animation:fadeIn .2s ease;';
+  t.textContent=msg;document.body.appendChild(t);
+  setTimeout(function(){t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(function(){t.remove();},300);},2000);
+}
+
+/* ===== [v23] Fix 3: 리사이즈 핸들 ===== */
+var resizeState={active:false,mode:null,startX:0,startW:0};
+
+function startResize(e,mode){
+  e.preventDefault();
+  resizeState.active=true;
+  resizeState.mode=mode;
+  resizeState.startX=e.clientX;
+  var handle=e.target;
+  handle.classList.add('active');
+
+  if(mode==='free'){
+    var chat=document.querySelector('.chat');
+    resizeState.startW=chat.offsetWidth;
+    resizeState.panel=chat;
+  }else{
+    var gL=document.querySelector('.gL');
+    resizeState.startW=gL.offsetWidth;
+    resizeState.panel=gL;
+  }
+  resizeState.handle=handle;
+  document.addEventListener('mousemove',doResize);
+  document.addEventListener('mouseup',stopResize);
+  document.body.style.cursor='col-resize';
+  document.body.style.userSelect='none';
+}
+
+function doResize(e){
+  if(!resizeState.active)return;
+  var dx=e.clientX-resizeState.startX;
+  var newW=resizeState.startW+dx;
+  var parent=resizeState.panel.parentElement;
+  var parentW=parent.offsetWidth;
+  var minW=200,maxW=parentW-200;
+  newW=Math.max(minW,Math.min(maxW,newW));
+  resizeState.panel.style.width=newW+'px';
+  resizeState.panel.style.minWidth=newW+'px';
+  resizeState.panel.style.flex='none';
+}
+
+function stopResize(){
+  resizeState.active=false;
+  if(resizeState.handle)resizeState.handle.classList.remove('active');
+  document.removeEventListener('mousemove',doResize);
+  document.removeEventListener('mouseup',stopResize);
+  document.body.style.cursor='';
+  document.body.style.userSelect='';
+}
+</script>
+</body>
+</html>
