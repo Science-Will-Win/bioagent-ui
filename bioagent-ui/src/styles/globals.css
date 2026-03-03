@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f4f6;
+  --bg-tertiary: #e5e7eb;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --border-color: #d1d5db;
+  --accent: #3b82f6;
+  --node-bg: #ffffff;
+  --node-border: #d1d5db;
+  --canvas-bg: #fafafa;
+  --canvas-dot: #d1d5db;
+  --edge-flow: #9ca3af;
+  --edge-ref: #60a5fa;
+  --popup-bg: #ffffff;
+  --popup-border: #e5e7eb;
+  --sidebar-bg: #f9fafb;
+  --chat-user-bg: #3b82f6;
+  --chat-ai-bg: #f3f4f6;
+}
+
+.dark {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border-color: #334155;
+  --accent: #60a5fa;
+  --node-bg: #1e293b;
+  --node-border: #475569;
+  --canvas-bg: #0f172a;
+  --canvas-dot: #1e293b;
+  --edge-flow: #64748b;
+  --edge-ref: #3b82f6;
+  --popup-bg: #1e293b;
+  --popup-border: #334155;
+  --sidebar-bg: #1e293b;
+  --chat-user-bg: #2563eb;
+  --chat-ai-bg: #1e293b;
+}
+
+body {
+  margin: 0;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  overflow: hidden;
+  height: 100vh;
+}
+
+#root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Canvas dot pattern */
+.canvas-dots {
+  background-image: radial-gradient(circle, var(--canvas-dot) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+/* Edge animation */
+@keyframes dash-flow {
+  to { stroke-dashoffset: -20; }
+}
+.edge-ref-animated {
+  animation: dash-flow 1s linear infinite;
+}
+
+/* Node glow */
+@keyframes node-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.4); }
+  50% { box-shadow: 0 0 16px rgba(59, 130, 246, 0.7); }
+}
+.node-running {
+  animation: node-glow 1.5s ease-in-out infinite;
+}
+
+/* Thinking streaming cursor */
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.thinking-cursor::after {
+  content: '▌';
+  animation: blink-cursor 0.8s step-end infinite;
+  color: var(--accent);
+}
+
+/* Popup overlay */
+.popup-overlay {
+  backdrop-filter: blur(4px);
+}
+
+/* Port hover */
+.port-circle:hover {
+  transform: scale(1.4);
+  filter: brightness(1.3);
+}
+.port-circle {
+  transition: transform 0.15s, filter 0.15s;
+}
+
+/* Splitter handle */
+.splitter-handle {
+  cursor: col-resize;
+  transition: background 0.2s;
+}
+.splitter-handle:hover {
+  background: var(--accent) !important;
+}
